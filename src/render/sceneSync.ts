@@ -5,6 +5,7 @@
 import { Container, Graphics } from 'pixi.js';
 import type { SimEvent } from '../sim/events';
 import type { World } from '../sim/world';
+import type { ArtTextures } from './assets';
 import { tileToScreen } from './iso';
 import { createBuildingView } from './views/buildingView';
 import { createUnitView, type UnitView } from './views/unitView';
@@ -22,13 +23,14 @@ export class SceneSync {
   constructor(
     private entityLayer: Container,
     private effectLayer: Container,
+    private art: ArtTextures,
   ) {}
 
   update(world: World, events: SimEvent[], alpha: number): void {
     // Buildings: create new, remove vanished.
     for (const [id, b] of world.buildings) {
       if (!this.buildingViews.has(id)) {
-        const view = createBuildingView(b);
+        const view = createBuildingView(b, this.art);
         this.buildingViews.set(id, view);
         this.entityLayer.addChild(view);
       }
@@ -44,7 +46,7 @@ export class SceneSync {
     for (const [id, u] of world.units) {
       let view = this.unitViews.get(id);
       if (!view) {
-        view = createUnitView(u);
+        view = createUnitView(u, this.art);
         this.unitViews.set(id, view);
         this.entityLayer.addChild(view.container);
       }

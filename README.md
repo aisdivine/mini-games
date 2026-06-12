@@ -46,8 +46,14 @@ Autosaves to localStorage every 30s; "New Game" wipes it.
 
 - `src/sim/` — deterministic simulation, **zero pixi imports**, runs headless
   in vitest. Fixed 20 Hz tick; seeded RNG; plain serializable world struct.
+- `src/art/` — hand-drawn vector art, generated as SVG from typed primitives
+  (`sketch.ts`: seeded wobbly beziers, hatching, watercolor washes over an
+  opaque paper underlay). Every object resolves to a `VectorAsset` by its
+  `ArtId` (`BuildingType | UnitRole`); adding art for a new building is one
+  spec entry in `buildings.ts`. Deterministic — same id, same strokes.
 - `src/render/` — PixiJS views reconciled against the world by entity id
-  (`sceneSync.ts`). Programmer art lives in `views/` — the sprite-swap seam.
+  (`sceneSync.ts`). `assets.ts` rasterizes the SVGs to textures at 2× once
+  at startup; views are just sprites positioned by each asset's anchor.
 - `src/input/`, `src/ui/` — pointer/hotkeys → command queue; DOM HUD.
 - `src/main.ts` — composition root: game loop (fixed-timestep sim,
   interpolated render), mode state, save/load.

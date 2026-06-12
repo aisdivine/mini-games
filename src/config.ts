@@ -63,7 +63,7 @@ export interface BuildingDef {
 export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   keep: {
     type: 'keep', label: 'Keep', size: { w: 3, h: 3 }, costWood: 0, hp: 600,
-    buildable: false, housing: 4, color: 0x8a8a96, height: 72,
+    buildable: false, housing: 4, color: 0x8a8a96, height: 84,
   },
   campfire: {
     type: 'campfire', label: 'Campfire', size: { w: 1, h: 1 }, costWood: 0, hp: 50,
@@ -93,7 +93,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   mill: {
     type: 'mill', label: 'Mill', size: { w: 2, h: 2 }, costWood: 12, hp: 120,
-    buildable: true, color: 0xb8b8c4, height: 44,
+    buildable: true, color: 0xb8b8c4, height: 58,
     recipe: {
       input: { resource: 'wheat', amount: 1 },
       output: { resource: 'flour', amount: 1, dest: 'stockpile' },
@@ -102,7 +102,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   bakery: {
     type: 'bakery', label: 'Bakery', size: { w: 2, h: 2 }, costWood: 10, hp: 120,
-    buildable: true, color: 0xc97b4a, height: 28,
+    buildable: true, color: 0xc97b4a, height: 32,
     recipe: {
       input: { resource: 'flour', amount: 1 },
       output: { resource: 'bread', amount: 1, dest: 'granary' },

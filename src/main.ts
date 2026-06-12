@@ -16,6 +16,7 @@ import { housingCapacity, populationCount } from './sim/population';
 import { deserializeWorld, serializeWorld } from './sim/save';
 import { buildingAt, type Building, type Unit, type Vec2 } from './sim/world';
 import { createApp } from './render/app';
+import { loadArtTextures } from './render/assets';
 import { Camera } from './render/camera';
 import { tileToScreen } from './render/iso';
 import { SceneSync } from './render/sceneSync';
@@ -55,10 +56,11 @@ async function start(): Promise<void> {
   const sim = new Sim(Date.now() & 0x7fffffff, loadedWorld ?? undefined);
   if (loadedWorld) setTimeout(() => hud.showMessage('Game resumed from autosave'), 300);
 
+  const art = await loadArtTextures();
   layers.ground.addChild(createGroundView());
   const overlay = new OverlayView();
   layers.overlay.addChild(overlay.container);
-  const sceneSync = new SceneSync(layers.entities, layers.overlay);
+  const sceneSync = new SceneSync(layers.entities, layers.overlay, art);
 
   const keep = sim.world.buildings.get(sim.world.keepId);
   const center = keep ? tileToScreen(keep.tile.x + 1.5, keep.tile.y + 1.5) : { x: 0, y: 0 };
