@@ -15,7 +15,7 @@ export async function createApp(): Promise<{ app: Application; layers: Layers }>
   const app = new Application();
   await app.init({
     resizeTo: window,
-    background: 0xe7e1cd, // paper
+    background: 0xefe7cf, // pale sand
     resolution: window.devicePixelRatio || 1,
     autoDensity: true,
     antialias: true,

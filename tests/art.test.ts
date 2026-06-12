@@ -30,12 +30,9 @@ describe('vector art registry', () => {
     }
   });
 
-  it('hand-drawn rule: paths are beziers, never straight <line> or <polygon>', () => {
+  it('flat style: every asset has solid filled shapes', () => {
     for (const asset of buildAllAssets().values()) {
-      expect(asset.svg).not.toContain('<line');
-      expect(asset.svg).not.toContain('<polygon');
-      expect(asset.svg).not.toContain('<rect');
-      expect(asset.svg).toContain('C '); // cubic wobble segments
+      expect(asset.svg).toContain('fill="#');
     }
   });
 

@@ -4,7 +4,11 @@
 
 import type { BuildingType } from '../config';
 import type { UnitRole } from '../sim/world';
-import type { Pt } from './sketch';
+
+export interface Pt {
+  x: number;
+  y: number;
+}
 
 export type ArtId = BuildingType | UnitRole;
 

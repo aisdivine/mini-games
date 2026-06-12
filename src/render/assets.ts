@@ -3,7 +3,7 @@
 
 import { ImageSource, Texture } from 'pixi.js';
 import { buildAllAssets, type ArtId, type VectorAsset } from '../art';
-import type { Pt } from '../art/sketch';
+import type { Pt } from '../art/types';
 
 const RESOLUTION = 2;
 
