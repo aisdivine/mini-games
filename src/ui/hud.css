@@ -1,0 +1,97 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #1f3320;
+  font-family: -apple-system, 'Segoe UI', sans-serif;
+  user-select: none;
+}
+
+#game canvas {
+  display: block;
+}
+
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  color: #f0e6d2;
+}
+
+#hud-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 24px;
+  padding: 8px 16px;
+  background: rgba(20, 14, 8, 0.85);
+  font-size: 14px;
+  pointer-events: auto;
+}
+
+#hud-top .stat {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+#hud-build {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+#hud-build button {
+  background: rgba(20, 14, 8, 0.9);
+  color: #f0e6d2;
+  border: 1px solid #6b5436;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+#hud-build button:hover {
+  background: #3a2d1a;
+}
+
+#hud-build button.active {
+  border-color: #ffe066;
+  background: #4a3a20;
+}
+
+#hud-messages {
+  position: absolute;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.hud-message {
+  background: rgba(20, 14, 8, 0.9);
+  border: 1px solid #6b5436;
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+#hud-debug {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  font-size: 12px;
+  font-family: ui-monospace, monospace;
+  color: #b8c4a8;
+  white-space: pre;
+}
