@@ -95,3 +95,57 @@ body {
   color: #b8c4a8;
   white-space: pre;
 }
+
+#hud-info {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: none;
+  min-width: 180px;
+  background: rgba(20, 14, 8, 0.9);
+  border: 1px solid #6b5436;
+  border-radius: 4px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  pointer-events: auto;
+}
+
+#hud-info h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: #ffe066;
+}
+
+#hud-gameover {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+}
+
+.gameover-box {
+  background: rgba(20, 14, 8, 0.95);
+  border: 2px solid #6b5436;
+  border-radius: 8px;
+  padding: 32px 48px;
+  text-align: center;
+}
+
+.gameover-box h1 {
+  margin: 0 0 8px;
+}
+
+.gameover-box button {
+  margin-top: 16px;
+  background: #4a3a20;
+  color: #f0e6d2;
+  border: 1px solid #ffe066;
+  border-radius: 4px;
+  padding: 10px 24px;
+  font-size: 15px;
+  cursor: pointer;
+}

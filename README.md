@@ -1,0 +1,53 @@
+# Stronghold-lite
+
+A Stronghold Crusader-inspired isometric castle & economy sim — vertical slice.
+TypeScript + Vite + PixiJS v8; pure-TS simulation fully decoupled from rendering.
+
+## Run
+
+```bash
+npm install
+npm run dev      # → http://localhost:5173
+npm test         # headless sim tests (vitest)
+npm run build    # type-check + production build
+```
+
+## How to play
+
+Feed your people and survive the raid that arrives at the 8-minute mark.
+
+- **Economy:** build a Woodcutter for wood, then the bread chain —
+  Wheat Farm → Mill → Bakery → Granary. Each production building binds one
+  idle peasant who physically hauls goods through the stockpile.
+- **Population:** peasants eat bread every 20s. Fed = popularity rises and
+  immigrants arrive (build Houses for capacity). Starving = popularity falls
+  and peasants leave. Popularity 0 = defeat.
+- **Defense:** drag Walls, place Towers (range bonus for adjacent archers),
+  recruit Archers at the keep and position them with click-to-move.
+- **Win:** kill every raider. **Lose:** keep destroyed or popularity collapse.
+
+### Controls
+
+| Input | Action |
+|---|---|
+| Left-drag / arrows | Pan camera |
+| Scroll wheel | Zoom to cursor |
+| Build menu + click | Place building (drag for walls) |
+| Right-click / Esc | Cancel mode, clear selection |
+| Click unit/building | Select (archers: click ground to move) |
+| `1` `2` `3` | Speed 1× / 2× / 4× |
+| Space | Pause |
+| `g` | Debug: show unit paths |
+| `w` `p` `r` | Cheats: +100 wood, spawn peasant, start raid |
+
+Autosaves to localStorage every 30s; "New Game" wipes it.
+
+## Architecture
+
+- `src/sim/` — deterministic simulation, **zero pixi imports**, runs headless
+  in vitest. Fixed 20 Hz tick; seeded RNG; plain serializable world struct.
+- `src/render/` — PixiJS views reconciled against the world by entity id
+  (`sceneSync.ts`). Programmer art lives in `views/` — the sprite-swap seam.
+- `src/input/`, `src/ui/` — pointer/hotkeys → command queue; DOM HUD.
+- `src/main.ts` — composition root: game loop (fixed-timestep sim,
+  interpolated render), mode state, save/load.

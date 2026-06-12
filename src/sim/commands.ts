@@ -85,8 +85,10 @@ export function applyCommand(world: World, cmd: Command, events: SimEvent[]): vo
     }
 
     case 'moveUnit': {
+      // Archer-only: ordering a bound peasant around would orphan its
+      // workplace (workerId stays set but the cycle never resumes).
       const unit = world.units.get(cmd.unitId);
-      if (!unit || unit.role === 'raider') return;
+      if (!unit || unit.role !== 'archer') return;
       unit.task = { kind: 'goTo', dest: { ...cmd.dest }, then: { kind: 'none' } };
       unit.path = null; // force repath next tick
       unit.targetId = null;
