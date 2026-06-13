@@ -154,3 +154,6 @@ export const RAIDER_DAMAGE = 8;
 export const RAIDER_COOLDOWN_TICKS = 20;
 export const RAIDER_COUNT = 8;
 export const RAID_AT_TICK = 20 * 60 * 8; // 8 minutes in
+// Master switch. While false, raids never auto-trigger — peaceful city-builder
+// sandbox. The debug 'r' key still works for manual testing.
+export const RAIDS_ENABLED = false;

@@ -11,6 +11,7 @@ import {
   BUILDINGS,
   MAP_W,
   RAID_AT_TICK,
+  RAIDS_ENABLED,
   RAIDER_COOLDOWN_TICKS,
   RAIDER_COUNT,
   RAIDER_DAMAGE,
@@ -31,7 +32,7 @@ import {
 } from './world';
 
 export function updateCombat(world: World, events: SimEvent[]): void {
-  if (!world.raid.triggered && world.tick >= RAID_AT_TICK) {
+  if (RAIDS_ENABLED && !world.raid.triggered && world.tick >= RAID_AT_TICK) {
     world.raid.triggered = true;
   }
   if (world.raid.triggered && world.raid.spawnedCount === 0) {

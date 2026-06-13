@@ -5,6 +5,7 @@ import {
   BUILDINGS,
   MAX_ACCUM_MS,
   RAID_AT_TICK,
+  RAIDS_ENABLED,
   SIM_DT_MS,
   SIM_TICKS_PER_SEC,
   type BuildingType,
@@ -323,6 +324,9 @@ async function start(): Promise<void> {
     const mmss = raidIn !== null
       ? `${Math.floor(raidIn / 60)}:${String(raidIn % 60).padStart(2, '0')}`
       : null;
+    const raidStat = !RAIDS_ENABLED && !w.raid.triggered
+      ? `<span class="stat">☮ peaceful</span>`
+      : mmss ? `<span class="stat">⚔ raid in ${mmss}</span>` : `<span class="stat">⚔ raid!</span>`;
     hud.setTopBar(
       [
         `<span class="stat">🪵 ${w.stockpile.wood}</span>`,
@@ -331,7 +335,7 @@ async function start(): Promise<void> {
         `<span class="stat">🍞 ${w.granaryBread}</span>`,
         `<span class="stat">👥 ${pop}/${housing}</span>`,
         `<span class="stat">❤️ ${w.popularity} (food ${w.lastFoodDelta >= 0 ? '+' : ''}${w.lastFoodDelta})</span>`,
-        mmss ? `<span class="stat">⚔ raid in ${mmss}</span>` : `<span class="stat">⚔ raid!</span>`,
+        raidStat,
         `<span class="stat">${paused ? '⏸ paused' : `▶ ${speed}×`}</span>`,
       ].join(''),
     );
