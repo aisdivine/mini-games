@@ -8,7 +8,8 @@ import type { SimEvent } from '../sim/events';
 import type { Tree, World } from '../sim/world';
 import type { ArtTextures } from './assets';
 import { tileToScreen } from './iso';
-import { createBuildingView } from './views/buildingView';
+import { createBuildingView, type BuildingView } from './views/buildingView';
+import { drawBuildingAnim } from './views/buildingAnim';
 import { createUnitView, type UnitView } from './views/unitView';
 
 interface Effect {
@@ -24,7 +25,7 @@ interface TreeView {
 }
 
 export class SceneSync {
-  private buildingViews = new Map<number, Container>();
+  private buildingViews = new Map<number, BuildingView>();
   private unitViews = new Map<number, UnitView>();
   private treeViews = new Map<number, TreeView>();
   private effects: Effect[] = [];
@@ -84,15 +85,17 @@ export class SceneSync {
 
   private syncBuildings(world: World): void {
     for (const [id, b] of world.buildings) {
-      if (!this.buildingViews.has(id)) {
-        const view = createBuildingView(b, this.art);
+      let view = this.buildingViews.get(id);
+      if (!view) {
+        view = createBuildingView(b, this.art);
         this.buildingViews.set(id, view);
-        this.entityLayer.addChild(view);
+        this.entityLayer.addChild(view.container);
       }
+      drawBuildingAnim(view.anim, b, this.clock);
     }
     for (const [id, view] of this.buildingViews) {
       if (!world.buildings.has(id)) {
-        view.destroy({ children: true });
+        view.container.destroy({ children: true });
         this.buildingViews.delete(id);
       }
     }

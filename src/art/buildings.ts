@@ -10,7 +10,6 @@ import {
   crenEdge,
   cube,
   cylinder,
-  flag,
   isoBox,
   lerp,
   line,
@@ -78,8 +77,7 @@ const SPECS: Record<BuildingType, ArtSpec> = {
         crenEdge(Bu, Ru, 3, cren) +
         slit(g.B, g.R, { x: 0, y: -1 }, 0.78, 38) +
         slit(g.L, g.B, { x: 0, y: -1 }, 0.5, 40) +
-        archDoor(g, 16) +
-        flag(Tu, 28)
+        archDoor(g, 16) // flag is drawn (waving) by buildingAnim
       );
     },
   },
@@ -102,8 +100,7 @@ const SPECS: Record<BuildingType, ArtSpec> = {
       rim.sort((a, b) => a.y - b.y);
       for (const p of rim) out += cube(p, 5, 6, shade(STONE, 0.85));
       out += slit({ x: c.x, y: c.y + 6 }, { x: c.x, y: c.y + 6 }, { x: 0, y: -1 }, 0, 34);
-      out += flag({ x: c.x + 4, y: topCy }, 26);
-      return out;
+      return out; // flag is drawn (waving) by buildingAnim
     },
   },
   wall: {
@@ -175,35 +172,15 @@ const SPECS: Record<BuildingType, ArtSpec> = {
   mill: {
     base: STONE,
     topMargin: 20,
-    detail: (g) => {
-      const hub = add(add(g.B, g.up), { x: 0, y: 2 });
-      let out = '';
-      for (const ang of [0.55, 0.55 + Math.PI / 2, 0.55 + Math.PI, 0.55 + (3 * Math.PI) / 2]) {
-        const dir = { x: Math.cos(ang), y: Math.sin(ang) * 0.66 };
-        const perp = { x: -Math.sin(ang) * 0.4, y: Math.cos(ang) * 0.28 };
-        const inner = add(hub, { x: dir.x * 6, y: dir.y * 6 });
-        const tip = add(hub, { x: dir.x * 30, y: dir.y * 30 });
-        out += poly(
-          [inner, tip, add(tip, { x: perp.x * 15, y: perp.y * 15 }), add(inner, { x: perp.x * 15, y: perp.y * 15 })],
-          '#efe9d6',
-        );
-        out += line(hub, tip, '#7a7264', 1.6);
-      }
-      out += circle(hub.x, hub.y, 3, DOOR);
-      return out;
-    },
+    // sails (hub + turning blades) are drawn by buildingAnim
   },
   bakery: {
     base: '#c08a62',
     topMargin: 30,
     detail: (g) => {
       const roofAt = lerp(add(g.T, g.up), add(g.B, g.up), 0.32);
-      return (
-        archDoor(g, 13) +
-        cube(roofAt, 6, 12, '#9a6248') +
-        circle(roofAt.x + 2, roofAt.y - 22, 4, '#cfc8ba', 0.85) +
-        circle(roofAt.x + 7, roofAt.y - 28, 3, '#cfc8ba', 0.7)
-      );
+      // chimney only; the rising smoke is drawn by buildingAnim
+      return archDoor(g, 13) + cube(roofAt, 6, 12, '#9a6248');
     },
   },
   campfire: {
@@ -219,16 +196,7 @@ const SPECS: Record<BuildingType, ArtSpec> = {
       }
       out += line(add(c, { x: -8, y: 3 }), add(c, { x: 8, y: -4 }), '#7a5a36', 3.4);
       out += line(add(c, { x: -8, y: -4 }), add(c, { x: 8, y: 3 }), '#7a5a36', 3.4);
-      const fmt = (p: Pt) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
-      const drop = (s: number, fill: string) =>
-        pathFill(
-          `M ${fmt(add(c, { x: -4 * s, y: 0 }))}` +
-            ` Q ${fmt(add(c, { x: -4 * s, y: -8 * s }))} ${fmt(add(c, { x: 0, y: -13 * s }))}` +
-            ` Q ${fmt(add(c, { x: 4 * s, y: -8 * s }))} ${fmt(add(c, { x: 4 * s, y: 0 }))}` +
-            ` Q ${fmt(c)} ${fmt(add(c, { x: 0, y: 2 * s }))} Z`,
-          fill,
-        );
-      return out + drop(1, '#e07b2e') + drop(0.55, '#f2b338');
+      return out; // the flickering flame is drawn by buildingAnim
     },
   },
   stockpile: {

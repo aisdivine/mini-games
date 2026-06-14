@@ -56,7 +56,11 @@ Autosaves to localStorage every 30s; "New Game" wipes it.
   entry in `buildings.ts`. Fully deterministic.
 - `src/render/` — PixiJS views reconciled against the world by entity id
   (`sceneSync.ts`). `assets.ts` rasterizes the SVGs to textures at 2× once
-  at startup; views are just sprites positioned by each asset's anchor.
+  at startup; views are sprites positioned by each asset's anchor. Living
+  detail (`views/buildingAnim.ts`) is drawn into a per-building `Graphics`
+  overlay each frame from a render clock — turning mill sails, chimney smoke,
+  waving flags, flickering campfire, swaying wheat, sawdust — independent of
+  the sim, so it animates even while paused.
 - `src/input/`, `src/ui/` — pointer/hotkeys → command queue; DOM HUD.
 - `src/main.ts` — composition root: game loop (fixed-timestep sim,
   interpolated render), mode state, save/load.
