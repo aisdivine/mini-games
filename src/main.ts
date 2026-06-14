@@ -23,6 +23,8 @@ import { deserializeWorld, serializeWorld } from './sim/save';
 import { buildingAt, type Building, type Unit, type Vec2 } from './sim/world';
 import { createApp } from './render/app';
 import { loadArtTextures } from './render/assets';
+import { loadUnitTextures } from './render/unitTextures';
+import iconsSvg from './art/v2/icons.svg?raw';
 import { Camera } from './render/camera';
 import { tileToScreen } from './render/iso';
 import { SceneSync } from './render/sceneSync';
@@ -54,6 +56,8 @@ async function start(): Promise<void> {
   const { app, layers } = await createApp();
   const camera = new Camera(layers.world);
   const hud = new Hud();
+  // Inject the resource icon <symbol> sheet so the HUD can <use> them.
+  document.body.insertAdjacentHTML('afterbegin', iconsSvg);
   const hotkeys = new Hotkeys();
 
   // Sim: resume the autosave if present, else a fresh world.
@@ -62,11 +66,11 @@ async function start(): Promise<void> {
   const sim = new Sim(Date.now() & 0x7fffffff, loadedWorld ?? undefined);
   if (loadedWorld) setTimeout(() => hud.showMessage('Game resumed from autosave'), 300);
 
-  const art = await loadArtTextures();
+  const [art, unitTex] = await Promise.all([loadArtTextures(), loadUnitTextures()]);
   layers.ground.addChild(createGroundView());
   const overlay = new OverlayView();
   layers.overlay.addChild(overlay.container);
-  const sceneSync = new SceneSync(layers.entities, layers.overlay, art);
+  const sceneSync = new SceneSync(layers.entities, layers.overlay, art, unitTex);
 
   // Restore default zoom and re-center the camera on the keep.
   function resetView(): void {
@@ -428,12 +432,13 @@ async function start(): Promise<void> {
     const raidStat = !RAIDS_ENABLED && !w.raid.triggered
       ? `<span class="stat">☮ peaceful</span>`
       : mmss ? `<span class="stat">⚔ raid in ${mmss}</span>` : `<span class="stat">⚔ raid!</span>`;
+    const icon = (id: string): string => `<svg class="hud-icon"><use href="#${id}"/></svg>`;
     hud.setTopBar(
       [
-        `<span class="stat">🪵 ${w.stockpile.wood}</span>`,
-        `<span class="stat">🌾 ${w.stockpile.wheat}</span>`,
-        `<span class="stat">🫓 ${w.stockpile.flour}</span>`,
-        `<span class="stat" title="Food in the granary (bread / apples / meat)">🍞 ${w.granaryFood.bread} 🍎 ${w.granaryFood.apples} 🍖 ${w.granaryFood.meat}</span>`,
+        `<span class="stat">${icon('i-wood')} ${w.stockpile.wood}</span>`,
+        `<span class="stat">${icon('i-wheat')} ${w.stockpile.wheat}</span>`,
+        `<span class="stat">${icon('i-flour')} ${w.stockpile.flour}</span>`,
+        `<span class="stat" title="Food in the granary (bread / apples / meat)">${icon('i-bread')} ${w.granaryFood.bread} ${icon('i-apple')} ${w.granaryFood.apples} ${icon('i-meat')} ${w.granaryFood.meat}</span>`,
         `<span class="stat">👥 ${pop}/${housing}</span>`,
         `<span class="stat">❤️ ${w.popularity} (food ${w.lastFoodDelta >= 0 ? '+' : ''}${w.lastFoodDelta})</span>`,
         raidStat,

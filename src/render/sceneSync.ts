@@ -11,6 +11,7 @@ import { tileToScreen } from './iso';
 import { createBuildingView, type BuildingView } from './views/buildingView';
 import { drawBuildingAnim } from './views/buildingAnim';
 import { createUnitView, tunicColorFor, type UnitView } from './views/unitView';
+import type { UnitTextures } from './unitTextures';
 
 interface Effect {
   g: Graphics;
@@ -37,6 +38,7 @@ export class SceneSync {
     private entityLayer: Container,
     private effectLayer: Container,
     private art: ArtTextures,
+    private units: UnitTextures,
   ) {}
 
   update(world: World, events: SimEvent[], alpha: number, dtMs: number): void {
@@ -105,7 +107,7 @@ export class SceneSync {
     for (const [id, u] of world.units) {
       let view = this.unitViews.get(id);
       if (!view) {
-        view = createUnitView(u);
+        view = createUnitView(u, this.units);
         this.unitViews.set(id, view);
         this.entityLayer.addChild(view.container);
       }

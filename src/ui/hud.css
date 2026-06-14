@@ -35,8 +35,14 @@ body {
 
 #hud-top .stat {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
+}
+
+.hud-icon {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
 }
 
 #hud-build {

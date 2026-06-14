@@ -1,62 +1,22 @@
-// Flat-shaded map decor: trees and stumps. Same VectorAsset contract as
-// buildings/units; anchor is the base of the trunk (where it meets the tile).
+// Map decor (trees, stumps) — now sourced from the v2 art pack SVGs rather
+// than drawn in code. Each file carries its own size + data-anchor.
 
-import { circle, ellipse, poly, shade, shadow, svgDoc } from './flat';
+import treeSvg from './v2/tree.svg?raw';
+import stumpSvg from './v2/stump.svg?raw';
 import type { DecorId, Pt, VectorAsset } from './types';
 
-const W = 40;
-const H = 56;
-const ANCHOR: Pt = { x: 20, y: 50 };
-const TRUNK = '#6b4a2e';
-const LEAF = '#5b8a3c';
-
-function treeBody(): string {
-  // trunk
-  const trunk = poly(
-    [
-      { x: -3, y: 0 },
-      { x: 3, y: 0 },
-      { x: 2, y: -16 },
-      { x: -2, y: -16 },
-    ],
-    TRUNK,
-  );
-  // three stacked canopy blobs, lighter toward the top-left (light source)
-  const canopy =
-    ellipse(0, -20, 13, 9, shade(LEAF, 0.85)) +
-    ellipse(-2, -28, 11, 8, LEAF) +
-    ellipse(-3, -35, 8, 6.5, shade(LEAF, 1.12));
-  return shadow(0, 0, 12, 4.5) + trunk + canopy;
-}
-
-function stumpBody(): string {
-  return (
-    shadow(0, 0, 8, 3.5) +
-    poly(
-      [
-        { x: -5, y: 0 },
-        { x: 5, y: 0 },
-        { x: 4, y: -8 },
-        { x: -4, y: -8 },
-      ],
-      TRUNK,
-    ) +
-    // cut top: lighter ellipse with a couple of rings
-    ellipse(0, -8, 4.5, 2.4, shade(TRUNK, 1.4)) +
-    circle(0, -8, 1.6, shade(TRUNK, 1.15))
-  );
+function fromSvg(id: DecorId, raw: string): VectorAsset {
+  const svg = raw.trim();
+  const w = Number(/ width="([\d.]+)"/.exec(svg)?.[1] ?? 0);
+  const h = Number(/ height="([\d.]+)"/.exec(svg)?.[1] ?? 0);
+  const a = /data-anchor="([\d.]+),([\d.]+)"/.exec(svg);
+  const anchor: Pt = a ? { x: Number(a[1]), y: Number(a[2]) } : { x: w / 2, y: h };
+  return { id, svg, width: w, height: h, anchor };
 }
 
 export function buildDecorAssets(): Record<DecorId, VectorAsset> {
-  const make = (id: DecorId, body: string): VectorAsset => ({
-    id,
-    svg: svgDoc(W, H, ANCHOR, body),
-    width: W,
-    height: H,
-    anchor: ANCHOR,
-  });
   return {
-    tree: make('tree', treeBody()),
-    stump: make('stump', stumpBody()),
+    tree: fromSvg('tree', treeSvg),
+    stump: fromSvg('stump', stumpSvg),
   };
 }

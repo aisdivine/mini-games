@@ -61,6 +61,11 @@ Autosaves to localStorage every 30s; "New Game" wipes it.
   Every object resolves to a `VectorAsset` by its `ArtId`
   (`BuildingType | UnitRole`); adding art for a new building is one spec
   entry in `buildings.ts`. Fully deterministic.
+- `src/art/v2/` — external art pack SVGs (units, tree, stump, icons) per the
+  art bible in `docs/ART_SPEC.md`. Units are recolored per villager at load
+  (`render/unitTextures.ts`: skin tone from id, tunic from job) and the resource
+  icons drive the HUD. Buildings are still code-drawn (`art/buildings.ts`)
+  pending the full 13-building v2 set, then they swap in as one consistent set.
 - `src/render/` — PixiJS views reconciled against the world by entity id
   (`sceneSync.ts`). `assets.ts` rasterizes the SVGs to textures at 2× once
   at startup; views are sprites positioned by each asset's anchor. Living
