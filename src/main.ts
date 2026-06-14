@@ -101,6 +101,13 @@ async function start(): Promise<void> {
     location.reload();
   }
 
+  function saveGame(): void {
+    if (sim.world.outcome !== 'playing') return;
+    localStorage.setItem(SAVE_KEY, serializeWorld(sim.world));
+    autosaveTimer = 0; // restart the autosave countdown from this manual save
+    hud.showMessage('💾 Game saved');
+  }
+
   // --- Build menu -----------------------------------------------------------
   hud.buildMenu(
     [
@@ -112,7 +119,8 @@ async function start(): Promise<void> {
       { id: 'wall', label: `Wall (${BUILDINGS.wall.costWood}/tile)`, hint: 'Click-drag to draw' },
       { id: 'archer', label: `Archer (${ARCHER_COST_WOOD})`, hint: 'Recruited at the keep' },
       { id: 'demolish', label: 'Demolish', hint: 'Click a building to remove it (50% refund)' },
-      { id: 'resetview', label: 'Reset View', hint: 'Re-center on the keep (Home)' },
+      { id: 'resetview', label: 'Reset View', hint: 'Re-center on the keep (Home / c)' },
+      { id: 'save', label: '💾 Save', hint: 'Save your city now (also autosaves every 30s · S)' },
       { id: 'newgame', label: 'New Game' },
     ],
     (id) => {
@@ -124,6 +132,8 @@ async function start(): Promise<void> {
         setMode(mode.kind === 'wall' ? { kind: 'select' } : { kind: 'wall' });
       } else if (id === 'resetview') {
         resetView();
+      } else if (id === 'save') {
+        saveGame();
       } else if (id === 'newgame') {
         if (confirm('Abandon this city and start over?')) newGame();
       } else {
@@ -238,6 +248,8 @@ async function start(): Promise<void> {
   hotkeys.bind('2', () => (speed = 2));
   hotkeys.bind('3', () => (speed = 4));
   hotkeys.bind(' ', () => (paused = !paused));
+  hotkeys.bind('s', saveGame);
+  hotkeys.bind('S', saveGame);
   hotkeys.bind('Home', resetView);
   hotkeys.bind('c', resetView); // 'c' = center, easier to reach than Home
   hotkeys.bind('g', () => (overlay.debugPaths = !overlay.debugPaths));
