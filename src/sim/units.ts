@@ -8,12 +8,14 @@ import {
   REPATH_COOLDOWN_TICKS,
   UNIT_SPEED,
 } from '../config';
+import { TREE_REGROW_TICKS } from '../config';
 import { reserve, commitReservation, deposit, findDepot } from './economy';
 import type { SimEvent } from './events';
 import { inBounds, isPassable } from './grid';
 import { findPath } from './pathfinding';
 import { nextRand, nextInt } from './rng';
 import {
+  findNearestTree,
   resetToIdle,
   unbindFromWorkplace,
   type Building,
@@ -158,8 +160,16 @@ function updatePeasant(world: World, unit: Unit, events: SimEvent[]): void {
       const workplace = getWorkplace(world, unit);
       if (!workplace) return;
       const recipe = BUILDINGS[workplace.type].recipe!;
+      // Woodcutter: the wood comes off the tree it was chopping.
+      if (workplace.type === 'woodcutter' && unit.targetId !== null) {
+        const tree = world.trees.get(unit.targetId);
+        if (tree && tree.wood > 0) {
+          tree.wood--;
+          if (tree.wood <= 0) tree.regrowAt = world.tick + TREE_REGROW_TICKS;
+        }
+        unit.targetId = null;
+      }
       unit.carrying = { resource: recipe.output.resource, amount: recipe.output.amount };
-      unit.insideBuilding = false;
       dispatchDeliver(world, unit, workplace);
       return;
     }
@@ -220,6 +230,14 @@ function handleArrival(world: World, unit: Unit, goal: TaskGoal, events: SimEven
       const workplace = getWorkplace(world, unit);
       if (!workplace) return;
       unit.carrying = null; // input consumed
+      beginWork(unit, workplace); // grind/bake at the building, visibly
+      return;
+    }
+
+    case 'workHere': {
+      // Arrived at the work spot (a tree, or a field tile) — start laboring.
+      const workplace = getWorkplace(world, unit);
+      if (!workplace) return;
       beginWork(unit, workplace);
       return;
     }
@@ -245,13 +263,15 @@ function handleArrival(world: World, unit: Unit, goal: TaskGoal, events: SimEven
   }
 }
 
-/** At the workplace: fetch input if the recipe needs one, else start working. */
+/** At the workplace: fetch input if the recipe needs one, else head to the
+ *  work spot (a tree for woodcutters, the field for farms). */
 function dispatchFetchOrWork(world: World, unit: Unit, workplace: Building): void {
   const recipe = BUILDINGS[workplace.type].recipe;
   if (!recipe) {
     resetToIdle(unit);
     return;
   }
+
   if (recipe.input) {
     const stockpileB = findDepot(world, 'stockpile');
     const reservationId = stockpileB
@@ -270,12 +290,37 @@ function dispatchFetchOrWork(world: World, unit: Unit, workplace: Building): voi
     };
     return;
   }
+
+  // Woodcutter: walk to the nearest standing tree and chop it there.
+  if (workplace.type === 'woodcutter') {
+    const tree = findNearestTree(world, unit.pos);
+    if (!tree) {
+      workplace.state = { kind: 'awaitingInput' }; // forest exhausted; retry
+      unit.task = { kind: 'waitRetry', what: 'input', cooldown: WAIT_RETRY_TICKS };
+      return;
+    }
+    unit.targetId = tree.id;
+    workplace.state = { kind: 'producing', ticksLeft: recipe.workTicks };
+    unit.task = { kind: 'goTo', dest: workSpotNear(world, tree.tile), then: { kind: 'workHere' } };
+    return;
+  }
+
+  // Field/craft jobs (wheat farm, etc.): labor at the building, visibly.
+  // The worker is already standing at the access tile.
   beginWork(unit, workplace);
+}
+
+/** Stand just south of a target tile if possible (so the worker draws in
+ *  front of the tree), else on the tile itself. */
+function workSpotNear(world: World, tile: Vec2): Vec2 {
+  const south = { x: tile.x, y: tile.y + 1 };
+  if (isPassable(world, south.x, south.y)) return south;
+  return { ...tile };
 }
 
 function beginWork(unit: Unit, workplace: Building): void {
   const recipe = BUILDINGS[workplace.type].recipe!;
-  unit.insideBuilding = true;
+  unit.insideBuilding = false; // workers stay visible while laboring
   unit.task = { kind: 'workAt', ticksLeft: recipe.workTicks };
   workplace.state = { kind: 'producing', ticksLeft: recipe.workTicks };
 }

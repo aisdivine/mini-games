@@ -14,11 +14,13 @@ npm run build    # type-check + production build
 
 ## How to play
 
-Feed your people and survive the raid that arrives at the 8-minute mark.
+Peaceful economy sandbox — raids are paused (`RAIDS_ENABLED = false`).
 
-- **Economy:** build a Woodcutter for wood, then the bread chain —
-  Wheat Farm → Mill → Bakery → Granary. Each production building binds one
-  idle peasant who physically hauls goods through the stockpile.
+- **Economy:** build a Woodcutter (its peasant walks out to the nearest tree,
+  chops it, hauls the log back — trees deplete to stumps and regrow), then the
+  bread chain — Wheat Farm → Mill → Bakery → Granary. Each production building
+  binds one idle peasant who physically hauls goods through the stockpile.
+  Workers stay visible and animated while working.
 - **Population:** peasants eat bread every 20s. Fed = popularity rises and
   immigrants arrive (build Houses for capacity). Starving = popularity falls
   and peasants leave. Popularity 0 = defeat.

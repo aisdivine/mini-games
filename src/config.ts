@@ -84,7 +84,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   woodcutter: {
     type: 'woodcutter', label: 'Woodcutter', size: { w: 2, h: 2 }, costWood: 3, hp: 100,
     buildable: true, color: 0x6e4f2a, height: 22,
-    recipe: { output: { resource: 'wood', amount: 1, dest: 'stockpile' }, workTicks: 110 },
+    recipe: { output: { resource: 'wood', amount: 1, dest: 'stockpile' }, workTicks: 70 },
   },
   wheatFarm: {
     type: 'wheatFarm', label: 'Wheat Farm', size: { w: 3, h: 3 }, costWood: 10, hp: 100,
@@ -125,6 +125,16 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
 
 export const UNIT_SPEED = 0.12; // tiles per tick (~2.4 tiles/sec)
 export const REPATH_COOLDOWN_TICKS = 30;
+
+// ---------------------------------------------------------------------------
+// Trees — harvest nodes that woodcutters walk out to and chop
+// ---------------------------------------------------------------------------
+
+export const TREE_CLUSTERS = 16;
+export const TREE_PER_CLUSTER = 6;
+export const TREE_WOOD = 6; // chops before it becomes a stump
+export const TREE_REGROW_TICKS = 1000; // stump -> tree (~50s)
+export const TREE_CLEAR_RADIUS = 9; // keep the start area around the keep clear
 
 // ---------------------------------------------------------------------------
 // Population & popularity (M4)

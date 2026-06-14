@@ -241,7 +241,7 @@ async function start(): Promise<void> {
 
     const events = sim.drainEvents();
     handleEvents(events);
-    sceneSync.update(sim.world, events, Math.min(acc / SIM_DT_MS, 1));
+    sceneSync.update(sim.world, events, Math.min(acc / SIM_DT_MS, 1), ticker.deltaMS);
 
     hotkeys.update(camera);
     updateOverlays();

@@ -10,7 +10,8 @@ export interface Pt {
   y: number;
 }
 
-export type ArtId = BuildingType | UnitRole;
+export type DecorId = 'tree' | 'stump';
+export type ArtId = BuildingType | UnitRole | DecorId;
 
 export interface VectorAsset {
   id: ArtId;

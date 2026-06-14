@@ -10,11 +10,16 @@ import {
   POPULARITY_START,
   STARTING_PEASANTS,
   STARTING_WOOD,
+  TREE_CLEAR_RADIUS,
+  TREE_CLUSTERS,
+  TREE_PER_CLUSTER,
+  TREE_WOOD,
   type BuildingType,
   type Resource,
   type StockResource,
 } from '../config';
 import { idx } from './grid';
+import { nextInt } from './rng';
 
 export interface Vec2 {
   x: number;
@@ -56,6 +61,7 @@ export type TaskGoal =
   | { kind: 'startWork' } // arrived at workplace, begin the production cycle
   | { kind: 'pickup'; reservationId: number } // at stockpile, collect reserved input
   | { kind: 'returnWork' } // back at workplace carrying input
+  | { kind: 'workHere' } // arrived at the work spot (tree / field) — start laboring
   | { kind: 'dropoff' } // at depot carrying output
   | { kind: 'despawn' }; // emigrated off the map
 
@@ -83,6 +89,13 @@ export interface Reservation {
   buildingId: number;
 }
 
+export interface Tree {
+  id: number;
+  tile: Vec2;
+  wood: number; // chops remaining; 0 == stump
+  regrowAt: number | null; // tick at which a stump becomes a tree again
+}
+
 export interface RaidState {
   triggered: boolean;
   spawnedCount: number;
@@ -96,6 +109,7 @@ export interface World {
   occupancy: Uint32Array;
   buildings: Map<number, Building>;
   units: Map<number, Unit>;
+  trees: Map<number, Tree>;
   stockpile: Record<StockResource, number>;
   granaryBread: number;
   reservations: Reservation[];
@@ -120,6 +134,7 @@ export function createWorld(seed: number): World {
     occupancy: new Uint32Array(MAP_W * MAP_H),
     buildings: new Map(),
     units: new Map(),
+    trees: new Map(),
     stockpile: { wood: STARTING_WOOD, wheat: 0, flour: 0 },
     granaryBread: 10,
     reservations: [],
@@ -148,7 +163,52 @@ export function createWorld(seed: number): World {
     spawnUnit(world, 'peasant', { x: world.campfireTile.x + (i % 2), y: world.campfireTile.y + (i >> 1) }, 50);
   }
 
+  scatterTrees(world, cx, cy);
   return world;
+}
+
+/** Sprinkle clusters of trees across the map, keeping the start area clear. */
+function scatterTrees(world: World, cx: number, cy: number): void {
+  const margin = 2;
+  const occupied = new Set<number>(); // tile index -> taken by a tree
+  for (let c = 0; c < TREE_CLUSTERS; c++) {
+    // cluster center, retried a few times to land outside the keep's clearing
+    let gx = 0;
+    let gy = 0;
+    for (let tries = 0; tries < 8; tries++) {
+      gx = margin + nextInt(world, MAP_W - margin * 2);
+      gy = margin + nextInt(world, MAP_H - margin * 2);
+      if (Math.hypot(gx - cx, gy - cy) >= TREE_CLEAR_RADIUS) break;
+    }
+    if (Math.hypot(gx - cx, gy - cy) < TREE_CLEAR_RADIUS) continue;
+    for (let t = 0; t < TREE_PER_CLUSTER; t++) {
+      const tx = gx + nextInt(world, 5) - 2;
+      const ty = gy + nextInt(world, 5) - 2;
+      if (tx < margin || ty < margin || tx >= MAP_W - margin || ty >= MAP_H - margin) continue;
+      const key = ty * MAP_W + tx;
+      if (occupied.has(key) || world.occupancy[key] !== 0) continue;
+      if (Math.hypot(tx - cx, ty - cy) < TREE_CLEAR_RADIUS) continue;
+      occupied.add(key);
+      const id = world.nextId++;
+      world.trees.set(id, { id, tile: { x: tx, y: ty }, wood: TREE_WOOD, regrowAt: null });
+    }
+  }
+}
+
+/** Nearest standing (non-stump) tree to a point. Tiebreak by id for
+ *  deterministic worker behavior. Null if the forest is exhausted. */
+export function findNearestTree(world: World, from: Vec2): Tree | null {
+  let best: Tree | null = null;
+  let bestDist = Infinity;
+  for (const tree of world.trees.values()) {
+    if (tree.wood <= 0) continue;
+    const d = Math.abs(tree.tile.x - from.x) + Math.abs(tree.tile.y - from.y);
+    if (d < bestDist || (d === bestDist && best && tree.id < best.id)) {
+      bestDist = d;
+      best = tree;
+    }
+  }
+  return best;
 }
 
 /** Place without validation/cost — callers validate first. Bumps gridVersion. */

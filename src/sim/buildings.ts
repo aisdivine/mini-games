@@ -2,11 +2,24 @@
 // machine. The rest of the cycle is driven by the bound worker in units.ts;
 // building.state mirrors it for the HUD.
 
+import { TREE_WOOD } from '../config';
 import type { SimEvent } from './events';
 import type { World } from './world';
 
 export function updateBuildings(world: World, _events: SimEvent[]): void {
   assignWorkers(world);
+  regrowTrees(world);
+}
+
+// Stumps grow back into trees after their regrow timer, keeping the forest
+// (and the wood supply) sustainable without spawning logic.
+function regrowTrees(world: World): void {
+  for (const tree of world.trees.values()) {
+    if (tree.regrowAt !== null && world.tick >= tree.regrowAt) {
+      tree.wood = TREE_WOOD;
+      tree.regrowAt = null;
+    }
+  }
 }
 
 // Idle peasants at the campfire claim the longest-waiting building. Nearest
