@@ -42,6 +42,7 @@ export interface Building {
   /** Tile just outside the footprint where workers enter/exit. */
   accessTile: Vec2;
   hp: number;
+  level: number; // 1..MAX_BUILDING_LEVEL; higher = faster production
   workerId: number | null;
   state: ProductionState;
 }
@@ -221,6 +222,7 @@ export function placeBuildingRaw(world: World, type: BuildingType, tile: Vec2): 
     tile: { ...tile },
     accessTile: { x: tile.x + def.size.w, y: tile.y + def.size.h - 1 },
     hp: def.hp,
+    level: 1,
     workerId: null,
     state: def.recipe ? { kind: 'awaitingWorker' } : { kind: 'none' },
   };

@@ -118,6 +118,66 @@ body {
   color: #ffe066;
 }
 
+#hud-info .bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  margin: 4px 0;
+  overflow: hidden;
+}
+
+#hud-info .bar > span {
+  display: block;
+  height: 100%;
+  background: #7fd47f;
+}
+
+#hud-info button {
+  margin-top: 8px;
+  width: 100%;
+  background: #4a3a20;
+  color: #f0e6d2;
+  border: 1px solid #ffe066;
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+#hud-info button:hover {
+  background: #5e4a28;
+}
+
+#hud-info button:disabled {
+  opacity: 0.5;
+  border-color: #6b5436;
+  cursor: default;
+}
+
+#hud-tooltip {
+  position: fixed;
+  display: none;
+  z-index: 10;
+  max-width: 220px;
+  background: rgba(20, 14, 8, 0.94);
+  border: 1px solid #6b5436;
+  border-radius: 5px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #f0e6d2;
+  pointer-events: none;
+}
+
+#hud-tooltip .t-title {
+  color: #ffe066;
+  font-weight: 600;
+}
+
+#hud-tooltip .t-dim {
+  color: #b8ad97;
+}
+
 #hud-gameover {
   position: absolute;
   inset: 0;

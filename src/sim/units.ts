@@ -8,7 +8,7 @@ import {
   REPATH_COOLDOWN_TICKS,
   UNIT_SPEED,
 } from '../config';
-import { TREE_REGROW_TICKS } from '../config';
+import { TREE_REGROW_TICKS, workTicksAtLevel } from '../config';
 import { reserve, commitReservation, deposit, findDepot } from './economy';
 import type { SimEvent } from './events';
 import { inBounds, isPassable } from './grid';
@@ -300,7 +300,7 @@ function dispatchFetchOrWork(world: World, unit: Unit, workplace: Building): voi
       return;
     }
     unit.targetId = tree.id;
-    workplace.state = { kind: 'producing', ticksLeft: recipe.workTicks };
+    workplace.state = { kind: 'producing', ticksLeft: workTicksAtLevel(recipe.workTicks, workplace.level) };
     unit.task = { kind: 'goTo', dest: workSpotNear(world, tree.tile), then: { kind: 'workHere' } };
     return;
   }
@@ -320,9 +320,10 @@ function workSpotNear(world: World, tile: Vec2): Vec2 {
 
 function beginWork(unit: Unit, workplace: Building): void {
   const recipe = BUILDINGS[workplace.type].recipe!;
+  const ticks = workTicksAtLevel(recipe.workTicks, workplace.level);
   unit.insideBuilding = false; // workers stay visible while laboring
-  unit.task = { kind: 'workAt', ticksLeft: recipe.workTicks };
-  workplace.state = { kind: 'producing', ticksLeft: recipe.workTicks };
+  unit.task = { kind: 'workAt', ticksLeft: ticks };
+  workplace.state = { kind: 'producing', ticksLeft: ticks };
 }
 
 function dispatchDeliver(world: World, unit: Unit, workplace: Building): void {

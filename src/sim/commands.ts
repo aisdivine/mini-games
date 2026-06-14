@@ -7,6 +7,8 @@ import {
   ARCHER_HP,
   BUILDINGS,
   DEMOLISH_REFUND,
+  MAX_BUILDING_LEVEL,
+  upgradeWoodCost,
   type BuildingType,
 } from '../config';
 import type { SimEvent } from './events';
@@ -23,6 +25,7 @@ export type Command =
   | { type: 'placeBuilding'; building: BuildingType; tile: Vec2 }
   | { type: 'placeWalls'; tiles: Vec2[] }
   | { type: 'demolish'; buildingId: number }
+  | { type: 'upgrade'; buildingId: number }
   | { type: 'moveUnit'; unitId: number; dest: Vec2 }
   | { type: 'recruitArcher' }
   | { type: 'startRaid' }
@@ -81,6 +84,28 @@ export function applyCommand(world: World, cmd: Command, events: SimEvent[]): vo
       world.stockpile.wood += Math.floor(BUILDINGS[b.type].costWood * DEMOLISH_REFUND);
       removeBuilding(world, b);
       events.push({ type: 'buildingRemoved', id: b.id });
+      return;
+    }
+
+    case 'upgrade': {
+      const b = world.buildings.get(cmd.buildingId);
+      if (!b) return;
+      if (!BUILDINGS[b.type].recipe) {
+        events.push({ type: 'rejected', reason: `${BUILDINGS[b.type].label} can't be upgraded` });
+        return;
+      }
+      if (b.level >= MAX_BUILDING_LEVEL) {
+        events.push({ type: 'rejected', reason: `${BUILDINGS[b.type].label} is already max level` });
+        return;
+      }
+      const cost = upgradeWoodCost(b.type, b.level);
+      if (world.stockpile.wood < cost) {
+        events.push({ type: 'rejected', reason: `Need ${cost} wood to upgrade` });
+        return;
+      }
+      world.stockpile.wood -= cost;
+      b.level++;
+      events.push({ type: 'message', text: `${BUILDINGS[b.type].label} upgraded to Lv ${b.level} — faster production!` });
       return;
     }
 

@@ -141,6 +141,23 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
 };
 
 // ---------------------------------------------------------------------------
+// Building upgrades — spend wood to level up a production building and shrink
+// its craft time. Level 1..MAX; the factor is applied to the recipe workTicks.
+// ---------------------------------------------------------------------------
+
+export const MAX_BUILDING_LEVEL = 3;
+export const UPGRADE_SPEED_FACTOR = [1, 0.65, 0.42]; // craft-time multiplier by level
+
+export function workTicksAtLevel(baseTicks: number, level: number): number {
+  return Math.max(1, Math.round(baseTicks * UPGRADE_SPEED_FACTOR[level - 1]));
+}
+
+/** Wood to upgrade a building from `currentLevel` to the next level. */
+export function upgradeWoodCost(type: BuildingType, currentLevel: number): number {
+  return Math.max(10, BUILDINGS[type].costWood * 2 * currentLevel);
+}
+
+// ---------------------------------------------------------------------------
 // Units (used from M3 on)
 // ---------------------------------------------------------------------------
 

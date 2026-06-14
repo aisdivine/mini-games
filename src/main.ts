@@ -6,10 +6,13 @@ import {
   EDGE_PAN_MARGIN,
   EDGE_PAN_SPEED,
   MAX_ACCUM_MS,
+  MAX_BUILDING_LEVEL,
   RAID_AT_TICK,
   RAIDS_ENABLED,
   SIM_DT_MS,
   SIM_TICKS_PER_SEC,
+  upgradeWoodCost,
+  workTicksAtLevel,
   type BuildingType,
 } from './config';
 import { Sim } from './sim/sim';
@@ -128,6 +131,14 @@ async function start(): Promise<void> {
       }
     },
   );
+
+  // Upgrade button inside the selection panel (event-delegated so it survives
+  // the panel's per-frame re-render).
+  hud.onInfoAction((action) => {
+    if (action === 'upgrade' && selection.kind === 'building') {
+      sim.enqueue({ type: 'upgrade', buildingId: selection.id });
+    }
+  });
 
   // --- Pointer --------------------------------------------------------------
   function wallLine(a: Vec2, b: Vec2): Vec2[] {
@@ -344,19 +355,55 @@ async function start(): Promise<void> {
     overlay.drawPaths(sim.world);
   }
 
-  function stateText(b: Building): string {
+  // Live status line for a building's current activity.
+  function stateLabel(b: Building): string {
+    const def = BUILDINGS[b.type];
     switch (b.state.kind) {
       case 'none':
         return '';
       case 'awaitingWorker':
-        return 'Awaiting worker';
+        return b.workerId !== null ? '🚶 Worker on the way' : '⏳ Needs a worker';
       case 'awaitingInput':
-        return `Awaiting ${BUILDINGS[b.type].recipe?.input?.resource ?? 'input'}`;
-      case 'producing':
-        return `Working (${Math.ceil(b.state.ticksLeft / SIM_TICKS_PER_SEC)}s)`;
+        return b.type === 'woodcutter'
+          ? '🔍 Looking for trees'
+          : `⏳ Waiting for ${def.recipe?.input?.resource ?? 'input'}`;
+      case 'producing': {
+        const full = workTicksAtLevel(def.recipe!.workTicks, b.level);
+        const pct = Math.max(0, Math.min(100, Math.round((1 - b.state.ticksLeft / full) * 100)));
+        return `⚙ Working ${pct}%`;
+      }
       case 'delivering':
-        return 'Delivering';
+        return '📦 Delivering';
     }
+  }
+
+  // Shared status HTML for the hover tooltip (full=false) and the selection
+  // panel (full=true, adds HP + the upgrade button).
+  function buildingStatusHtml(b: Building, full: boolean): string {
+    const def = BUILDINGS[b.type];
+    const title = def.recipe ? `${def.label} · Lv ${b.level}` : def.label;
+    let html = full ? `<h3>${title}</h3>` : `<div class="t-title">${title}</div>`;
+    if (def.recipe) {
+      const sec = (workTicksAtLevel(def.recipe.workTicks, b.level) / SIM_TICKS_PER_SEC).toFixed(1);
+      html += `<span class="t-dim">Makes ${def.recipe.output.resource} · ~${sec}s each</span><br>`;
+      html += `${stateLabel(b)}<br>`;
+      html += `<span class="t-dim">Worker: ${b.workerId !== null ? 'yes' : 'none'}</span>`;
+    } else if (def.housing) {
+      html += `<span class="t-dim">Houses ${def.housing} people</span>`;
+    } else {
+      html += `<span class="t-dim">Storage</span>`;
+    }
+    if (full) {
+      html += `<br><span class="t-dim">HP ${b.hp}/${def.hp}</span>`;
+      if (def.recipe && b.level < MAX_BUILDING_LEVEL) {
+        const cost = upgradeWoodCost(b.type, b.level);
+        const ok = sim.world.stockpile.wood >= cost;
+        html += `<button data-action="upgrade"${ok ? '' : ' disabled'}>⬆ Upgrade to Lv ${b.level + 1} — ${cost} 🪵</button>`;
+      } else if (def.recipe) {
+        html += `<br><span class="t-dim">⭐ Max level</span>`;
+      }
+    }
+    return html;
   }
 
   function updateHud(): void {
@@ -387,18 +434,7 @@ async function start(): Promise<void> {
 
     if (selection.kind === 'building') {
       const b = sim.world.buildings.get(selection.id);
-      if (b) {
-        const def = BUILDINGS[b.type];
-        hud.setInfo(
-          `<h3>${def.label}</h3>` +
-            `HP ${b.hp}/${def.hp}<br>` +
-            (def.recipe
-              ? `${stateText(b)}<br>Worker: ${b.workerId !== null ? 'yes' : 'none'}`
-              : def.housing
-                ? `Houses ${def.housing}`
-                : ''),
-        );
-      }
+      if (b) hud.setInfo(buildingStatusHtml(b, true));
     } else if (selection.kind === 'unit') {
       const u = sim.world.units.get(selection.id);
       if (u) {
@@ -411,6 +447,14 @@ async function start(): Promise<void> {
       }
     } else {
       hud.setInfo('');
+    }
+
+    // Hover tooltip: status of the building under the cursor.
+    const hoverB = hovered && mouse.allowed ? buildingAt(w, hovered.x, hovered.y) : null;
+    if (hoverB && (mode.kind === 'select' || mode.kind === 'demolish')) {
+      hud.showTooltip(buildingStatusHtml(hoverB, false), mouse.x, mouse.y);
+    } else {
+      hud.hideTooltip();
     }
 
     hud.setDebug(

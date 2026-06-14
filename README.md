@@ -28,6 +28,9 @@ Peaceful economy sandbox — raids are paused (`RAIDS_ENABLED = false`).
 - **Population:** peasants eat every 20s. Fed = popularity rises and
   immigrants arrive (build Houses for capacity). Starving = popularity falls
   and peasants leave. Popularity 0 = defeat.
+- **Status & upgrades:** hover any building for a live status tooltip (what it
+  makes, craft time, current activity). Click to select, then **Upgrade** it
+  with wood (up to Lv 3) to speed up production.
 - **Defense:** drag Walls, place Towers (range bonus for adjacent archers),
   recruit Archers at the keep and position them with click-to-move.
 - **Win:** kill every raider. **Lose:** keep destroyed or popularity collapse.

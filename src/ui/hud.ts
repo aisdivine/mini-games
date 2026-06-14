@@ -12,6 +12,7 @@ export class Hud {
   private debug = document.getElementById('hud-debug')!;
   private messages = document.getElementById('hud-messages')!;
   private info = document.getElementById('hud-info')!;
+  private tooltip = document.getElementById('hud-tooltip')!;
   private gameover = document.getElementById('hud-gameover')!;
   private buttons = new Map<string, HTMLButtonElement>();
 
@@ -41,6 +42,32 @@ export class Hud {
   setInfo(html: string): void {
     this.info.innerHTML = html;
     this.info.style.display = html ? 'block' : 'none';
+  }
+
+  /** Delegated click handler for action buttons inside the info panel
+   *  (buttons carry data-action="..."). Survives per-frame innerHTML churn. */
+  onInfoAction(cb: (action: string) => void): void {
+    this.info.addEventListener('click', (e) => {
+      const el = (e.target as HTMLElement).closest('[data-action]');
+      if (el) cb(el.getAttribute('data-action')!);
+    });
+  }
+
+  /** Cursor-following hover tooltip. */
+  showTooltip(html: string, x: number, y: number): void {
+    this.tooltip.innerHTML = html;
+    this.tooltip.style.display = 'block';
+    // keep it on-screen: flip left/up near the right/bottom edges
+    const w = this.tooltip.offsetWidth;
+    const h = this.tooltip.offsetHeight;
+    const px = x + 16 + w > window.innerWidth ? x - 16 - w : x + 16;
+    const py = y + 16 + h > window.innerHeight ? y - 16 - h : y + 16;
+    this.tooltip.style.left = `${px}px`;
+    this.tooltip.style.top = `${py}px`;
+  }
+
+  hideTooltip(): void {
+    this.tooltip.style.display = 'none';
   }
 
   setDebug(text: string): void {
