@@ -16,6 +16,18 @@ export class Hud {
   private gameover = document.getElementById('hud-gameover')!;
   private buttons = new Map<string, HTMLButtonElement>();
 
+  // The info panel is split into volatile text (re-rendered every frame) and a
+  // PERSISTENT action button. The button must never be recreated, or a real
+  // click (down on one frame, up on the next) gets dropped mid-render.
+  private infoText = document.createElement('div');
+  private infoBtn = document.createElement('button');
+
+  constructor() {
+    this.info.innerHTML = '';
+    this.infoBtn.style.display = 'none';
+    this.info.append(this.infoText, this.infoBtn);
+  }
+
   setTopBar(html: string): void {
     this.top.innerHTML = html;
   }
@@ -39,18 +51,26 @@ export class Hud {
     }
   }
 
+  /** Volatile status text (safe to call every frame). */
   setInfo(html: string): void {
-    this.info.innerHTML = html;
     this.info.style.display = html ? 'block' : 'none';
+    if (this.infoText.innerHTML !== html) this.infoText.innerHTML = html;
   }
 
-  /** Delegated click handler for action buttons inside the info panel
-   *  (buttons carry data-action="..."). Survives per-frame innerHTML churn. */
-  onInfoAction(cb: (action: string) => void): void {
-    this.info.addEventListener('click', (e) => {
-      const el = (e.target as HTMLElement).closest('[data-action]');
-      if (el) cb(el.getAttribute('data-action')!);
-    });
+  /** Update the persistent action button (never recreated). label=null hides it. */
+  setAction(label: string | null, enabled = true): void {
+    if (!label) {
+      this.infoBtn.style.display = 'none';
+      return;
+    }
+    this.infoBtn.style.display = 'block';
+    if (this.infoBtn.textContent !== label) this.infoBtn.textContent = label;
+    this.infoBtn.disabled = !enabled;
+  }
+
+  /** Click handler for the persistent info-panel action button. */
+  onInfoAction(cb: () => void): void {
+    this.infoBtn.addEventListener('click', cb);
   }
 
   /** Cursor-following hover tooltip. */

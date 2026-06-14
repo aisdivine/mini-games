@@ -134,8 +134,8 @@ async function start(): Promise<void> {
 
   // Upgrade button inside the selection panel (event-delegated so it survives
   // the panel's per-frame re-render).
-  hud.onInfoAction((action) => {
-    if (action === 'upgrade' && selection.kind === 'building') {
+  hud.onInfoAction(() => {
+    if (selection.kind === 'building') {
       sim.enqueue({ type: 'upgrade', buildingId: selection.id });
     }
   });
@@ -395,13 +395,10 @@ async function start(): Promise<void> {
     }
     if (full) {
       html += `<br><span class="t-dim">HP ${b.hp}/${def.hp}</span>`;
-      if (def.recipe && b.level < MAX_BUILDING_LEVEL) {
-        const cost = upgradeWoodCost(b.type, b.level);
-        const ok = sim.world.stockpile.wood >= cost;
-        html += `<button data-action="upgrade"${ok ? '' : ' disabled'}>⬆ Upgrade to Lv ${b.level + 1} — ${cost} 🪵</button>`;
-      } else if (def.recipe) {
+      if (def.recipe && b.level >= MAX_BUILDING_LEVEL) {
         html += `<br><span class="t-dim">⭐ Max level</span>`;
       }
+      // The upgrade button itself is a persistent element, set via hud.setAction.
     }
     return html;
   }
@@ -434,7 +431,16 @@ async function start(): Promise<void> {
 
     if (selection.kind === 'building') {
       const b = sim.world.buildings.get(selection.id);
-      if (b) hud.setInfo(buildingStatusHtml(b, true));
+      if (b) {
+        hud.setInfo(buildingStatusHtml(b, true));
+        const def = BUILDINGS[b.type];
+        if (def.recipe && b.level < MAX_BUILDING_LEVEL) {
+          const cost = upgradeWoodCost(b.type, b.level);
+          hud.setAction(`⬆ Upgrade to Lv ${b.level + 1} — ${cost} 🪵`, w.stockpile.wood >= cost);
+        } else {
+          hud.setAction(null);
+        }
+      }
     } else if (selection.kind === 'unit') {
       const u = sim.world.units.get(selection.id);
       if (u) {
@@ -445,8 +451,10 @@ async function start(): Promise<void> {
             (u.role === 'archer' ? '<br><em>Click ground to move</em>' : ''),
         );
       }
+      hud.setAction(null);
     } else {
       hud.setInfo('');
+      hud.setAction(null);
     }
 
     // Hover tooltip: status of the building under the cursor.
