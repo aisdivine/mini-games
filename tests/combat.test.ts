@@ -10,7 +10,7 @@ function run(sim: Sim, ticks: number): void {
 
 function makeSim(): Sim {
   const sim = new Sim(3);
-  sim.world.granaryBread = 100000; // keep popularity out of the picture
+  sim.world.granaryFood.bread = 100000; // keep popularity out of the picture
   sim.world.nextImmigrationTick = Number.MAX_SAFE_INTEGER;
   return sim;
 }

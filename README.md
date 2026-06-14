@@ -21,7 +21,11 @@ Peaceful economy sandbox — raids are paused (`RAIDS_ENABLED = false`).
   bread chain — Wheat Farm → Mill → Bakery → Granary. Each production building
   binds one idle peasant who physically hauls goods through the stockpile.
   Workers stay visible and animated while working.
-- **Population:** peasants eat bread every 20s. Fed = popularity rises and
+- **Food:** all food goes to the **Granary**. The fastest sources are single
+  buildings — an **Apple Orchard** or **Hunter's Hut** — so build one early
+  instead of waiting on the whole bread chain. A **varied diet** (bread +
+  apples + meat) gives a bigger popularity boost than any single food.
+- **Population:** peasants eat every 20s. Fed = popularity rises and
   immigrants arrive (build Houses for capacity). Starving = popularity falls
   and peasants leave. Popularity 0 = defeat.
 - **Defense:** drag Walls, place Towers (range bonus for adjacent archers),

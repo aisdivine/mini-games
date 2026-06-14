@@ -5,10 +5,12 @@ import {
   BUILDINGS,
   EAT_INTERVAL_TICKS,
   EMIGRATION_MAX_POPULARITY,
+  FOOD_TYPES,
   IMMIGRATION_INTERVAL_TICKS,
   IMMIGRATION_MIN_POPULARITY,
   POPULARITY_FED_DELTA,
   POPULARITY_HUNGRY_DELTA,
+  POPULARITY_VARIETY_BONUS_MAX,
 } from '../config';
 import type { SimEvent } from './events';
 import { spawnUnit, unbindFromWorkplace, type Unit, type World } from './world';
@@ -22,6 +24,27 @@ export function populationCount(world: World): number {
   return n;
 }
 
+export function totalFood(world: World): number {
+  return FOOD_TYPES.reduce((sum, f) => sum + world.granaryFood[f], 0);
+}
+
+/** Eat `need` rations, drawing from the most-abundant food type first so
+ *  smaller stocks survive longer (keeping a varied diet around). */
+function consumeFood(world: World, need: number): void {
+  let left = need;
+  while (left > 0) {
+    let best: (typeof FOOD_TYPES)[number] | null = null;
+    for (const f of FOOD_TYPES) {
+      if (world.granaryFood[f] > 0 && (best === null || world.granaryFood[f] > world.granaryFood[best])) {
+        best = f;
+      }
+    }
+    if (best === null) break;
+    world.granaryFood[best]--;
+    left--;
+  }
+}
+
 export function housingCapacity(world: World): number {
   let cap = 0;
   for (const b of world.buildings.values()) {
@@ -33,20 +56,24 @@ export function housingCapacity(world: World): number {
 export function updatePopulation(world: World, events: SimEvent[]): void {
   const pop = populationCount(world);
 
-  // Eating: abstract rations from the granary, no walking trips.
+  // Eating: abstract rations from the granary's food pool, no walking trips.
   if (world.tick >= world.nextEatTick) {
     world.nextEatTick = world.tick + EAT_INTERVAL_TICKS;
     if (pop > 0) {
       const need = Math.ceil(pop / 4);
-      if (world.granaryBread >= need) {
-        world.granaryBread -= need;
-        world.popularity = Math.min(100, world.popularity + POPULARITY_FED_DELTA);
-        world.lastFoodDelta = POPULARITY_FED_DELTA;
+      const total = totalFood(world);
+      if (total >= need) {
+        const variety = FOOD_TYPES.filter((f) => world.granaryFood[f] > 0).length;
+        consumeFood(world, need);
+        const bonus = Math.min(variety - 1, POPULARITY_VARIETY_BONUS_MAX);
+        const delta = POPULARITY_FED_DELTA + bonus;
+        world.popularity = Math.min(100, world.popularity + delta);
+        world.lastFoodDelta = delta;
       } else {
-        world.granaryBread = 0;
+        for (const f of FOOD_TYPES) world.granaryFood[f] = 0;
         world.popularity = Math.max(0, world.popularity + POPULARITY_HUNGRY_DELTA);
         world.lastFoodDelta = POPULARITY_HUNGRY_DELTA;
-        events.push({ type: 'message', text: 'Not enough bread — popularity falling!' });
+        events.push({ type: 'message', text: 'Not enough food — popularity falling!' });
       }
     }
   }

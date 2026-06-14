@@ -25,6 +25,25 @@ describe('production chain', () => {
     expect(sim.world.stockpile.wood).toBeGreaterThan(afterCost + 2);
   });
 
+  it('apple orchard is a one-building food source straight to the granary', () => {
+    const sim = makeSim();
+    sim.enqueue({ type: 'placeBuilding', building: 'appleOrchard', tile: { x: 24, y: 38 } });
+    sim.enqueue({ type: 'placeBuilding', building: 'granary', tile: { x: 38, y: 28 } });
+    sim.tick();
+    const before = sim.world.granaryFood.apples;
+    run(sim, 4000);
+    expect(sim.world.granaryFood.apples).toBeGreaterThan(before);
+  });
+
+  it("hunter's hut produces meat into the granary", () => {
+    const sim = makeSim();
+    sim.enqueue({ type: 'placeBuilding', building: 'hunter', tile: { x: 24, y: 38 } });
+    sim.enqueue({ type: 'placeBuilding', building: 'granary', tile: { x: 38, y: 28 } });
+    sim.tick();
+    run(sim, 4000);
+    expect(sim.world.granaryFood.meat).toBeGreaterThan(0);
+  });
+
   it('full bread chain: farm -> mill -> bakery -> granary', () => {
     const sim = makeSim();
     sim.enqueue({ type: 'placeBuilding', building: 'wheatFarm', tile: { x: 26, y: 36 } });
@@ -32,9 +51,9 @@ describe('production chain', () => {
     sim.enqueue({ type: 'placeBuilding', building: 'bakery', tile: { x: 38, y: 36 } });
     sim.enqueue({ type: 'placeBuilding', building: 'granary', tile: { x: 38, y: 28 } });
     sim.tick();
-    const breadBefore = sim.world.granaryBread;
+    const breadBefore = sim.world.granaryFood.bread;
     run(sim, 12000);
-    expect(sim.world.granaryBread).toBeGreaterThan(breadBefore);
+    expect(sim.world.granaryFood.bread).toBeGreaterThan(breadBefore);
     // wheat and flour flowed through the stockpile at some point
     expect(sim.world.stockpile.wheat).toBeGreaterThanOrEqual(0);
   });

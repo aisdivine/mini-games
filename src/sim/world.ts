@@ -15,6 +15,7 @@ import {
   TREE_PER_CLUSTER,
   TREE_WOOD,
   type BuildingType,
+  type FoodType,
   type Resource,
   type StockResource,
 } from '../config';
@@ -111,7 +112,7 @@ export interface World {
   units: Map<number, Unit>;
   trees: Map<number, Tree>;
   stockpile: Record<StockResource, number>;
-  granaryBread: number;
+  granaryFood: Record<FoodType, number>;
   reservations: Reservation[];
   workerWanted: number[]; // building ids waiting for a worker, FIFO
   popularity: number;
@@ -136,7 +137,7 @@ export function createWorld(seed: number): World {
     units: new Map(),
     trees: new Map(),
     stockpile: { wood: STARTING_WOOD, wheat: 0, flour: 0 },
-    granaryBread: 10,
+    granaryFood: { bread: 8, apples: 6, meat: 0 },
     reservations: [],
     workerWanted: [],
     popularity: POPULARITY_START,

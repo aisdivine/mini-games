@@ -44,7 +44,7 @@ type Selection =
   | { kind: 'building'; id: number };
 
 const BUILD_ORDER: BuildingType[] = [
-  'house', 'granary', 'woodcutter', 'wheatFarm', 'mill', 'bakery', 'tower',
+  'house', 'granary', 'appleOrchard', 'hunter', 'woodcutter', 'wheatFarm', 'mill', 'bakery', 'tower',
 ];
 
 async function start(): Promise<void> {
@@ -377,7 +377,7 @@ async function start(): Promise<void> {
         `<span class="stat">🪵 ${w.stockpile.wood}</span>`,
         `<span class="stat">🌾 ${w.stockpile.wheat}</span>`,
         `<span class="stat">🫓 ${w.stockpile.flour}</span>`,
-        `<span class="stat">🍞 ${w.granaryBread}</span>`,
+        `<span class="stat" title="Food in the granary (bread / apples / meat)">🍞 ${w.granaryFood.bread} 🍎 ${w.granaryFood.apples} 🍖 ${w.granaryFood.meat}</span>`,
         `<span class="stat">👥 ${pop}/${housing}</span>`,
         `<span class="stat">❤️ ${w.popularity} (food ${w.lastFoodDelta >= 0 ? '+' : ''}${w.lastFoodDelta})</span>`,
         raidStat,

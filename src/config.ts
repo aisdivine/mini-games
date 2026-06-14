@@ -28,8 +28,10 @@ export const DEMOLISH_REFUND = 0.5;
 // Resources & buildings
 // ---------------------------------------------------------------------------
 
-export type Resource = 'wood' | 'wheat' | 'flour' | 'bread';
-export type StockResource = Exclude<Resource, 'bread'>; // bread lives in the granary
+export type Resource = 'wood' | 'wheat' | 'flour' | 'bread' | 'apples' | 'meat';
+export type StockResource = 'wood' | 'wheat' | 'flour'; // stored in the stockpile
+export type FoodType = 'bread' | 'apples' | 'meat'; // stored in the granary
+export const FOOD_TYPES: FoodType[] = ['bread', 'apples', 'meat'];
 
 export type BuildingType =
   | 'keep'
@@ -38,6 +40,8 @@ export type BuildingType =
   | 'granary'
   | 'house'
   | 'woodcutter'
+  | 'appleOrchard'
+  | 'hunter'
   | 'wheatFarm'
   | 'mill'
   | 'bakery'
@@ -90,6 +94,18 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     type: 'woodcutter', label: 'Woodcutter', size: { w: 2, h: 2 }, costWood: 3, hp: 100,
     buildable: true, color: 0x6e4f2a, height: 22,
     recipe: { output: { resource: 'wood', amount: 1, dest: 'stockpile' }, workTicks: 70 },
+  },
+  // Fast single-building food sources — no input chain, deposit straight to the
+  // granary. Build one of these early so you don't starve setting up bread.
+  appleOrchard: {
+    type: 'appleOrchard', label: 'Apple Orchard', size: { w: 3, h: 3 }, costWood: 8, hp: 100,
+    buildable: true, color: 0x6fae5c, height: 14,
+    recipe: { output: { resource: 'apples', amount: 1, dest: 'granary' }, workTicks: 95 },
+  },
+  hunter: {
+    type: 'hunter', label: "Hunter's Hut", size: { w: 2, h: 2 }, costWood: 8, hp: 100,
+    buildable: true, color: 0x8a6240, height: 24,
+    recipe: { output: { resource: 'meat', amount: 1, dest: 'granary' }, workTicks: 120 },
   },
   wheatFarm: {
     type: 'wheatFarm', label: 'Wheat Farm', size: { w: 3, h: 3 }, costWood: 10, hp: 100,
@@ -148,7 +164,10 @@ export const TREE_CLEAR_RADIUS = 9; // keep the start area around the keep clear
 export const POPULARITY_START = 75;
 export const EAT_INTERVAL_TICKS = 400; // every 20s
 export const POPULARITY_FED_DELTA = 2;
-export const POPULARITY_HUNGRY_DELTA = -8;
+export const POPULARITY_HUNGRY_DELTA = -6;
+// A varied diet keeps people happier: +1 popularity per distinct food type
+// eaten beyond the first, capped here. (1 food = +0, 2 = +1, 3 = +2.)
+export const POPULARITY_VARIETY_BONUS_MAX = 2;
 export const IMMIGRATION_INTERVAL_TICKS = 200;
 export const IMMIGRATION_MIN_POPULARITY = 60;
 export const EMIGRATION_MAX_POPULARITY = 30;

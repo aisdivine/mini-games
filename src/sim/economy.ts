@@ -41,8 +41,11 @@ export function releaseBuildingReservations(world: World, buildingId: number): v
 }
 
 export function deposit(world: World, resource: Resource, amount: number): void {
-  if (resource === 'bread') world.granaryBread += amount;
-  else world.stockpile[resource] += amount;
+  if (resource === 'bread' || resource === 'apples' || resource === 'meat') {
+    world.granaryFood[resource] += amount;
+  } else {
+    world.stockpile[resource] += amount;
+  }
 }
 
 export function findDepot(world: World, dest: 'stockpile' | 'granary'): Building | null {

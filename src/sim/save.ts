@@ -4,7 +4,7 @@
 
 import type { Building, Tree, Unit, World } from './world';
 
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 
 interface SaveFile {
   version: number;

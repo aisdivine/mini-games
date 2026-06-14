@@ -151,6 +151,54 @@ const SPECS: Record<BuildingType, ArtSpec> = {
       return archDoor(g, 12) + log(add(at, { x: -5, y: 0 }), 4) + log(add(at, { x: 4, y: 1 }), 4) + log(add(at, { x: 0, y: -6 }), 4);
     },
   },
+  appleOrchard: {
+    base: '#6fae5c',
+    topMargin: 18,
+    flat: true,
+    custom: (g) => {
+      let out = poly([g.T, g.R, g.B, g.L], '#6fae5c');
+      for (let i = 0; i < 3; i++) {
+        const t0 = (i + 0.3) / 3;
+        const t1 = (i + 0.55) / 3;
+        out += poly(
+          [lerp(g.T, g.L, t0), lerp(g.R, g.B, t0), lerp(g.R, g.B, t1), lerp(g.T, g.L, t1)],
+          shade('#6fae5c', 0.9),
+        );
+      }
+      // little apple trees dotted across the orchard
+      const c = lerp(g.T, g.B, 0.5);
+      const spots: Pt[] = [
+        { x: -34, y: 2 }, { x: -6, y: -14 }, { x: 26, y: -2 }, { x: -14, y: 16 }, { x: 18, y: 18 },
+      ];
+      for (const s of spots) {
+        const tx = c.x + s.x;
+        const ty = c.y + s.y;
+        out += poly([{ x: tx - 1.5, y: ty }, { x: tx + 1.5, y: ty }, { x: tx + 1, y: ty - 7 }, { x: tx - 1, y: ty - 7 }], '#6b4a2e');
+        out += circle(tx, ty - 11, 6, '#4f8a3e');
+        out += circle(tx - 2, ty - 13, 1.4, '#d0432f');
+        out += circle(tx + 3, ty - 9, 1.4, '#d0432f');
+      }
+      return out;
+    },
+  },
+  hunter: {
+    base: '#8a6240',
+    topMargin: 12,
+    detail: (g) => {
+      const d = lerp(g.B, g.R, 0.5);
+      const a = add(d, { x: 0, y: -15 });
+      const antler = '#efe6d2';
+      return (
+        archDoor(g, 12) +
+        line(add(a, { x: -2, y: 0 }), add(a, { x: -7, y: -9 }), antler, 1.5) +
+        line(add(a, { x: -5, y: -4 }), add(a, { x: -10, y: -5 }), antler, 1.2) +
+        line(add(a, { x: -6, y: -7 }), add(a, { x: -10, y: -9 }), antler, 1.2) +
+        line(add(a, { x: 2, y: 0 }), add(a, { x: 7, y: -9 }), antler, 1.5) +
+        line(add(a, { x: 5, y: -4 }), add(a, { x: 10, y: -5 }), antler, 1.2) +
+        line(add(a, { x: 6, y: -7 }), add(a, { x: 10, y: -9 }), antler, 1.2)
+      );
+    },
+  },
   wheatFarm: {
     base: '#d9c878',
     topMargin: 6,
