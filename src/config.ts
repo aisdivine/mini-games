@@ -16,6 +16,11 @@ export const ZOOM_MAX = 2.0;
 export const ZOOM_STEP = 1.1;
 export const KEY_PAN_SPEED = 12; // px per frame at scale 1
 
+// Edge scrolling: cursor within this many px of a screen edge pans the camera
+// that direction (classic RTS feel). Speed is px per 60fps frame.
+export const EDGE_PAN_MARGIN = 60;
+export const EDGE_PAN_SPEED = 16;
+
 export const STARTING_WOOD = 100;
 export const DEMOLISH_REFUND = 0.5;
 

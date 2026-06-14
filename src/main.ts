@@ -3,6 +3,8 @@
 import {
   ARCHER_COST_WOOD,
   BUILDINGS,
+  EDGE_PAN_MARGIN,
+  EDGE_PAN_SPEED,
   MAX_ACCUM_MS,
   RAID_AT_TICK,
   RAIDS_ENABLED,
@@ -222,6 +224,38 @@ async function start(): Promise<void> {
   hotkeys.bind('p', () => sim.enqueue({ type: 'spawnPeasant' }));
   hotkeys.bind('r', () => sim.enqueue({ type: 'startRaid' }));
 
+  // --- Edge scrolling -------------------------------------------------------
+  // Move the cursor near a screen edge to pan the camera that way (RTS-style),
+  // alongside drag-pan and wheel-zoom. Hovering the DOM HUD fires the canvas
+  // mouseleave, which naturally suspends edge-scroll over the controls.
+  // Track the cursor at the window level so all four edges work even over the
+  // HUD overlay; only suppress scrolling when the cursor is over a genuinely
+  // interactive HUD element (buttons), where e.target is not the canvas.
+  const mouse = { x: 0, y: 0, allowed: false };
+  window.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+    mouse.allowed = e.target === app.canvas;
+  });
+  window.addEventListener('mouseout', (e) => {
+    if (!e.relatedTarget) mouse.allowed = false; // cursor left the window
+  });
+
+  function edgeScroll(dtMs: number): void {
+    if (!mouse.allowed) return;
+    const sw = app.screen.width;
+    const sh = app.screen.height;
+    const m = EDGE_PAN_MARGIN;
+    const sp = EDGE_PAN_SPEED * (dtMs / 16.67);
+    let dx = 0;
+    let dy = 0;
+    if (mouse.x < m) dx += sp; // cursor left → reveal the left (camera moves left)
+    else if (mouse.x > sw - m) dx -= sp; // cursor right → camera moves right
+    if (mouse.y < m) dy += sp;
+    else if (mouse.y > sh - m) dy -= sp;
+    if (dx || dy) camera.panBy(dx, dy);
+  }
+
   // --- Game loop ---------------------------------------------------------------
   let acc = 0;
   let autosaveTimer = 0;
@@ -244,6 +278,7 @@ async function start(): Promise<void> {
     sceneSync.update(sim.world, events, Math.min(acc / SIM_DT_MS, 1), ticker.deltaMS);
 
     hotkeys.update(camera);
+    edgeScroll(ticker.deltaMS);
     updateOverlays();
     updateHud();
 

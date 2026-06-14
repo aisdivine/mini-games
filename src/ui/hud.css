@@ -29,7 +29,8 @@ body {
   padding: 8px 16px;
   background: rgba(20, 14, 8, 0.85);
   font-size: 14px;
-  pointer-events: auto;
+  /* non-interactive stats — let edge-scroll work along the top edge */
+  pointer-events: none;
 }
 
 #hud-top .stat {
