@@ -118,11 +118,12 @@ export class SceneSync {
       // Tunic color reflects the unit's current job (building it's bound to).
       const wp = u.workplaceId !== null ? world.buildings.get(u.workplaceId) : undefined;
 
-      // Cosmetic work animation, driven by the render clock (not the sim).
+      // Cosmetic animation, driven by the render clock (not the sim): work
+      // motions when laboring, a bouncy gait while walking.
       let rot = 0;
       let bob = 0;
+      const phase = u.id * 1.7;
       if (u.task.kind === 'workAt') {
-        const phase = u.id * 1.7;
         if (wp?.type === 'woodcutter') {
           const s = Math.sin(this.clock * 0.02 + phase);
           rot = s * 0.42; // axe swing
@@ -130,6 +131,10 @@ export class SceneSync {
         } else {
           bob = -Math.abs(Math.sin(this.clock * 0.013 + phase)) * 2.5; // labor bob
         }
+      } else if (u.pos.x !== u.prevPos.x || u.pos.y !== u.prevPos.y) {
+        const t = this.clock * 0.022 + phase; // walking gait
+        bob = -Math.abs(Math.sin(t)) * 2.2;
+        rot = Math.sin(t) * 0.06;
       }
       view.container.position.set(p.x, p.y + bob);
       view.container.rotation = rot;
