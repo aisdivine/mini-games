@@ -65,9 +65,14 @@ async function start(): Promise<void> {
   layers.overlay.addChild(overlay.container);
   const sceneSync = new SceneSync(layers.entities, layers.overlay, art);
 
-  const keep = sim.world.buildings.get(sim.world.keepId);
-  const center = keep ? tileToScreen(keep.tile.x + 1.5, keep.tile.y + 1.5) : { x: 0, y: 0 };
-  camera.centerOn(center.x, center.y, app.screen.width, app.screen.height);
+  // Restore default zoom and re-center the camera on the keep.
+  function resetView(): void {
+    layers.world.scale.set(1);
+    const keep = sim.world.buildings.get(sim.world.keepId);
+    const c = keep ? tileToScreen(keep.tile.x + 1.5, keep.tile.y + 1.5) : { x: 0, y: 0 };
+    camera.centerOn(c.x, c.y, app.screen.width, app.screen.height);
+  }
+  resetView();
 
   let mode: Mode = { kind: 'select' };
   let selection: Selection = { kind: 'none' };
@@ -104,6 +109,7 @@ async function start(): Promise<void> {
       { id: 'wall', label: `Wall (${BUILDINGS.wall.costWood}/tile)`, hint: 'Click-drag to draw' },
       { id: 'archer', label: `Archer (${ARCHER_COST_WOOD})`, hint: 'Recruited at the keep' },
       { id: 'demolish', label: 'Demolish', hint: 'Click a building to remove it (50% refund)' },
+      { id: 'resetview', label: 'Reset View', hint: 'Re-center on the keep (Home)' },
       { id: 'newgame', label: 'New Game' },
     ],
     (id) => {
@@ -113,6 +119,8 @@ async function start(): Promise<void> {
         setMode(mode.kind === 'demolish' ? { kind: 'select' } : { kind: 'demolish' });
       } else if (id === 'wall') {
         setMode(mode.kind === 'wall' ? { kind: 'select' } : { kind: 'wall' });
+      } else if (id === 'resetview') {
+        resetView();
       } else if (id === 'newgame') {
         if (confirm('Abandon this city and start over?')) newGame();
       } else {
@@ -219,6 +227,8 @@ async function start(): Promise<void> {
   hotkeys.bind('2', () => (speed = 2));
   hotkeys.bind('3', () => (speed = 4));
   hotkeys.bind(' ', () => (paused = !paused));
+  hotkeys.bind('Home', resetView);
+  hotkeys.bind('c', resetView); // 'c' = center, easier to reach than Home
   hotkeys.bind('g', () => (overlay.debugPaths = !overlay.debugPaths));
   hotkeys.bind('w', () => sim.enqueue({ type: 'cheatWood', amount: 100 }));
   hotkeys.bind('p', () => sim.enqueue({ type: 'spawnPeasant' }));
@@ -405,7 +415,7 @@ async function start(): Promise<void> {
 
     hud.setDebug(
       `${hovered ? `tile (${hovered.x}, ${hovered.y})` : 'tile —'}  tick ${w.tick}\n` +
-        `keys: 1/2/3 speed · space pause · g paths · w +wood · p +peasant · r raid · esc cancel`,
+        `keys: 1/2/3 speed · space pause · c center · g paths · w +wood · p +peasant · esc cancel`,
     );
   }
 }
