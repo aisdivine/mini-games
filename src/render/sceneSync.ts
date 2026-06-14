@@ -10,7 +10,7 @@ import type { ArtTextures } from './assets';
 import { tileToScreen } from './iso';
 import { createBuildingView, type BuildingView } from './views/buildingView';
 import { drawBuildingAnim } from './views/buildingAnim';
-import { createUnitView, type UnitView } from './views/unitView';
+import { createUnitView, tunicColorFor, type UnitView } from './views/unitView';
 
 interface Effect {
   g: Graphics;
@@ -105,7 +105,7 @@ export class SceneSync {
     for (const [id, u] of world.units) {
       let view = this.unitViews.get(id);
       if (!view) {
-        view = createUnitView(u, this.art);
+        view = createUnitView(u);
         this.unitViews.set(id, view);
         this.entityLayer.addChild(view.container);
       }
@@ -113,11 +113,13 @@ export class SceneSync {
       const ly = u.prevPos.y + (u.pos.y - u.prevPos.y) * alpha;
       const p = tileToScreen(lx, ly);
 
+      // Tunic color reflects the unit's current job (building it's bound to).
+      const wp = u.workplaceId !== null ? world.buildings.get(u.workplaceId) : undefined;
+
       // Cosmetic work animation, driven by the render clock (not the sim).
       let rot = 0;
       let bob = 0;
       if (u.task.kind === 'workAt') {
-        const wp = u.workplaceId !== null ? world.buildings.get(u.workplaceId) : undefined;
         const phase = u.id * 1.7;
         if (wp?.type === 'woodcutter') {
           const s = Math.sin(this.clock * 0.02 + phase);
@@ -131,7 +133,7 @@ export class SceneSync {
       view.container.rotation = rot;
       view.container.zIndex = lx + ly - 1 - 0.01;
       view.container.visible = !u.insideBuilding;
-      view.refresh(u);
+      view.refresh(u, tunicColorFor(u.role, wp?.type ?? null));
     }
     for (const [id, view] of this.unitViews) {
       if (!world.units.has(id)) {

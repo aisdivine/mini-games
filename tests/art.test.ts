@@ -1,17 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { buildAllAssets } from '../src/art';
 import { buildBuildingAssets } from '../src/art/buildings';
-import { buildUnitAssets } from '../src/art/units';
+import { buildDecorAssets } from '../src/art/decor';
 import { BUILDINGS, type BuildingType } from '../src/config';
 
 describe('vector art registry', () => {
-  it('has an asset for every building type and unit role', () => {
+  it('has a baked asset for every building type and decor item', () => {
     const assets = buildAllAssets();
     for (const type of Object.keys(BUILDINGS) as BuildingType[]) {
       expect(assets.has(type), `missing art for ${type}`).toBe(true);
     }
-    for (const role of ['peasant', 'archer', 'raider'] as const) {
-      expect(assets.has(role), `missing art for ${role}`).toBe(true);
+    for (const decor of ['tree', 'stump'] as const) {
+      expect(assets.has(decor), `missing art for ${decor}`).toBe(true);
     }
   });
 
@@ -42,9 +42,7 @@ describe('vector art registry', () => {
     for (const type of Object.keys(a) as BuildingType[]) {
       expect(a[type].svg).toBe(b[type].svg);
     }
-    const ua = buildUnitAssets();
-    const ub = buildUnitAssets();
-    expect(ua.peasant.svg).toBe(ub.peasant.svg);
+    expect(buildDecorAssets().tree.svg).toBe(buildDecorAssets().tree.svg);
   });
 
   it('building art canvas covers the footprint diamond', () => {
