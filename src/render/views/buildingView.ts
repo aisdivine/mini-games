@@ -26,7 +26,7 @@ interface LayerView {
 export interface BuildingView {
   container: Container;
   type: BuildingType;
-  layer?: LayerView;
+  layers: LayerView[];
 }
 
 export function buildingScale(type: BuildingType): number {
@@ -51,9 +51,8 @@ export function createBuildingView(
     container.addChild(sprite);
   }
 
-  let layer: LayerView | undefined;
-  const ld = layers.get(b.type);
-  if (ld) {
+  const layerViews: LayerView[] = [];
+  for (const ld of layers.get(b.type) ?? []) {
     const sprite = new Sprite(ld.texture);
     sprite.position.set(-ld.pivot.x, -ld.pivot.y); // pivot pixel at pivotC origin
     const pivotC = new Container();
@@ -62,19 +61,22 @@ export function createBuildingView(
     const home = { x: ld.pivot.x - ld.anchor.x, y: ld.pivot.y - ld.anchor.y };
     pivotC.position.set(home.x, home.y);
     container.addChild(pivotC);
-    layer = { pivotC, home, motion: ld.motion, activeOnly: ld.activeOnly };
+    layerViews.push({ pivotC, home, motion: ld.motion, activeOnly: ld.activeOnly });
   }
 
   const p = tileToScreen(b.tile.x + def.size.w / 2, b.tile.y + def.size.h / 2);
   container.position.set(p.x, p.y);
   container.zIndex = footprintDepth(b.type, b.tile);
-  return { container, type: b.type, layer };
+  return { container, type: b.type, layers: layerViews };
 }
 
-/** Drive the building's animated overlay from the render clock + sim state. */
-export function animateBuilding(view: BuildingView, b: Building, clock: number): void {
-  const L = view.layer;
-  if (!L) return;
+/** Drive the building's animated overlays from the render clock + sim state.
+ *  `night` (0..1) drives window glow. */
+export function animateBuilding(view: BuildingView, b: Building, clock: number, night: number): void {
+  for (const L of view.layers) animateLayer(L, b, clock, night);
+}
+
+function animateLayer(L: LayerView, b: Building, clock: number, night: number): void {
   const c = L.pivotC;
   const producing = b.state.kind === 'producing';
   const active = producing || b.state.kind === 'delivering';
@@ -87,6 +89,9 @@ export function animateBuilding(view: BuildingView, b: Building, clock: number):
   c.alpha = 1;
 
   switch (L.motion) {
+    case 'glow':
+      c.alpha = night;
+      break;
     case 'flag':
       c.skew.x = Math.sin(clock * 0.004 + phase) * 0.2;
       break;

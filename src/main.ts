@@ -28,6 +28,7 @@ import { loadUnitTextures } from './render/unitTextures';
 import iconsSvg from './art/v2/icons.svg?raw';
 import { Camera } from './render/camera';
 import { tileToScreen } from './render/iso';
+import { Atmosphere } from './render/atmosphere';
 import { SceneSync } from './render/sceneSync';
 import { createGroundView } from './render/views/groundView';
 import { WaterView } from './render/views/waterView';
@@ -79,6 +80,10 @@ async function start(): Promise<void> {
   const overlay = new OverlayView();
   layers.overlay.addChild(overlay.container);
   const sceneSync = new SceneSync(layers.entities, layers.overlay, art, unitTex, buildingLayers);
+
+  // Day/night tint lives on the stage (screen-space), above the panned world.
+  const atmosphere = new Atmosphere();
+  app.stage.addChild(atmosphere.g);
 
   // Restore default zoom and re-center the camera on the keep.
   function resetView(): void {
@@ -265,6 +270,10 @@ async function start(): Promise<void> {
   hotkeys.bind('Home', resetView);
   hotkeys.bind('c', resetView); // 'c' = center, easier to reach than Home
   hotkeys.bind('g', () => (overlay.debugPaths = !overlay.debugPaths));
+  hotkeys.bind('n', () => {
+    atmosphere.toggle();
+    hud.showMessage(atmosphere.enabled ? '🌙 Day/night on' : '☀️ Day/night off');
+  });
   hotkeys.bind('w', () => sim.enqueue({ type: 'cheatWood', amount: 100 }));
   hotkeys.bind('p', () => sim.enqueue({ type: 'spawnPeasant' }));
   hotkeys.bind('r', () => sim.enqueue({ type: 'startRaid' }));
@@ -323,7 +332,8 @@ async function start(): Promise<void> {
     handleEvents(events);
     renderClock += ticker.deltaMS;
     water.update(renderClock);
-    sceneSync.update(sim.world, events, Math.min(acc / SIM_DT_MS, 1), ticker.deltaMS);
+    atmosphere.update(renderClock, app.screen.width, app.screen.height);
+    sceneSync.update(sim.world, events, Math.min(acc / SIM_DT_MS, 1), ticker.deltaMS, atmosphere.nightAmount());
 
     hotkeys.update(camera);
     edgeScroll(ticker.deltaMS);

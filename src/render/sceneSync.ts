@@ -39,6 +39,7 @@ export class SceneSync {
   private fishViews = new Map<number, FishView>();
   private reedViews: { c: Container; phase: number }[] = [];
   private sceneryBuilt = false;
+  private night = 0; // 0..1 day/night amount, for window glow
   private effects: Effect[] = [];
   private clock = 0; // ms, render-only
   /** last swing sign per working woodcutter, to spawn one chip per downstroke */
@@ -52,8 +53,9 @@ export class SceneSync {
     private layers: BuildingLayers,
   ) {}
 
-  update(world: World, events: SimEvent[], alpha: number, dtMs: number): void {
+  update(world: World, events: SimEvent[], alpha: number, dtMs: number, night = 0): void {
     this.clock += dtMs;
+    this.night = night;
 
     if (!this.sceneryBuilt) this.buildScenery(world);
     this.animateReeds();
@@ -220,7 +222,7 @@ export class SceneSync {
         this.buildingViews.set(id, view);
         this.entityLayer.addChild(view.container);
       }
-      animateBuilding(view, b, this.clock);
+      animateBuilding(view, b, this.clock, this.night);
     }
     for (const [id, view] of this.buildingViews) {
       if (!world.buildings.has(id)) {

@@ -17,8 +17,9 @@ import bakerySmoke from '../art/v2/pack/buildings/bakery_smoke.svg?raw';
 import woodSaw from '../art/v2/pack/buildings/wood_saw.svg?raw';
 import wheatStalks from '../art/v2/pack/buildings/wheat_stalks.svg?raw';
 import campfireFlame from '../art/v2/pack/buildings/campfire_flame.svg?raw';
+import windowGlow from '../art/v2/pack/atmosphere/window_glow.svg?raw';
 
-export type LayerMotion = 'flag' | 'sails' | 'smoke' | 'saw' | 'stalks' | 'flame';
+export type LayerMotion = 'flag' | 'sails' | 'smoke' | 'saw' | 'stalks' | 'flame' | 'glow';
 
 interface LayerSpec {
   raw: string;
@@ -27,15 +28,16 @@ interface LayerSpec {
   activeOnly?: boolean;
 }
 
-const SPECS: Partial<Record<BuildingType, LayerSpec>> = {
-  keep: { raw: keepFlag, motion: 'flag' },
-  tower: { raw: towerFlag, motion: 'flag' },
-  mill: { raw: millSails, motion: 'sails' },
-  house: { raw: houseSmoke, motion: 'smoke' },
-  bakery: { raw: bakerySmoke, motion: 'smoke', activeOnly: true },
-  woodcutter: { raw: woodSaw, motion: 'saw', activeOnly: true },
-  wheatFarm: { raw: wheatStalks, motion: 'stalks' },
-  campfire: { raw: campfireFlame, motion: 'flame' },
+// Each building may have several stacked layers (drawn in order on top of base).
+const SPECS: Partial<Record<BuildingType, LayerSpec[]>> = {
+  keep: [{ raw: keepFlag, motion: 'flag' }],
+  tower: [{ raw: towerFlag, motion: 'flag' }],
+  mill: [{ raw: millSails, motion: 'sails' }],
+  house: [{ raw: houseSmoke, motion: 'smoke' }, { raw: windowGlow, motion: 'glow' }],
+  bakery: [{ raw: bakerySmoke, motion: 'smoke', activeOnly: true }],
+  woodcutter: [{ raw: woodSaw, motion: 'saw', activeOnly: true }],
+  wheatFarm: [{ raw: wheatStalks, motion: 'stalks' }],
+  campfire: [{ raw: campfireFlame, motion: 'flame' }],
 };
 
 export interface LayerTexture {
@@ -46,7 +48,7 @@ export interface LayerTexture {
   activeOnly: boolean;
 }
 
-export type BuildingLayers = Map<BuildingType, LayerTexture>;
+export type BuildingLayers = Map<BuildingType, LayerTexture[]>;
 
 function num(re: RegExp, svg: string, fallback: number): number {
   return Number(re.exec(svg)?.[1] ?? fallback);
@@ -54,21 +56,26 @@ function num(re: RegExp, svg: string, fallback: number): number {
 
 export async function loadBuildingLayers(): Promise<BuildingLayers> {
   const out: BuildingLayers = new Map();
-  const tasks = (Object.entries(SPECS) as [BuildingType, LayerSpec][]).map(
-    async ([type, spec]) => {
-      const svg = spec.raw.trim();
-      const ax = num(/data-anchor="([\d.]+),/, svg, 65);
-      const ay = num(/data-anchor="[\d.]+,([\d.]+)"/, svg, 92);
-      const px = num(/data-pivot="([\d.]+),/, svg, ax);
-      const py = num(/data-pivot="[\d.]+,([\d.]+)"/, svg, ay);
-      const texture = await rasterizeSvg(svg);
-      out.set(type, {
-        texture,
-        anchor: { x: ax, y: ay },
-        pivot: { x: px, y: py },
-        motion: spec.motion,
-        activeOnly: spec.activeOnly ?? false,
-      });
+  const tasks = (Object.entries(SPECS) as [BuildingType, LayerSpec[]][]).map(
+    async ([type, specs]) => {
+      const built = await Promise.all(
+        specs.map(async (spec) => {
+          const svg = spec.raw.trim();
+          const ax = num(/data-anchor="([\d.]+),/, svg, 65);
+          const ay = num(/data-anchor="[\d.]+,([\d.]+)"/, svg, 92);
+          const px = num(/data-pivot="([\d.]+),/, svg, ax);
+          const py = num(/data-pivot="[\d.]+,([\d.]+)"/, svg, ay);
+          const texture = await rasterizeSvg(svg);
+          return {
+            texture,
+            anchor: { x: ax, y: ay },
+            pivot: { x: px, y: py },
+            motion: spec.motion,
+            activeOnly: spec.activeOnly ?? false,
+          } as LayerTexture;
+        }),
+      );
+      out.set(type, built);
     },
   );
   await Promise.all(tasks);
