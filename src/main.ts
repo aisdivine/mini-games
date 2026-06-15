@@ -49,7 +49,7 @@ type Selection =
   | { kind: 'building'; id: number };
 
 const BUILD_ORDER: BuildingType[] = [
-  'house', 'granary', 'appleOrchard', 'hunter', 'woodcutter', 'wheatFarm', 'mill', 'bakery', 'tower',
+  'house', 'granary', 'appleOrchard', 'hunter', 'fishery', 'woodcutter', 'wheatFarm', 'mill', 'bakery', 'tower',
 ];
 
 async function start(): Promise<void> {
@@ -67,7 +67,7 @@ async function start(): Promise<void> {
   if (loadedWorld) setTimeout(() => hud.showMessage('Game resumed from autosave'), 300);
 
   const [art, unitTex] = await Promise.all([loadArtTextures(), loadUnitTextures()]);
-  layers.ground.addChild(createGroundView());
+  layers.ground.addChild(createGroundView(sim.world));
   const overlay = new OverlayView();
   layers.overlay.addChild(overlay.container);
   const sceneSync = new SceneSync(layers.entities, layers.overlay, art, unitTex);
@@ -380,9 +380,9 @@ async function start(): Promise<void> {
       case 'awaitingWorker':
         return b.workerId !== null ? '🚶 Worker on the way' : '⏳ Needs a worker';
       case 'awaitingInput':
-        return b.type === 'woodcutter'
-          ? '🔍 Looking for trees'
-          : `⏳ Waiting for ${def.recipe?.input?.resource ?? 'input'}`;
+        if (b.type === 'woodcutter') return '🔍 Looking for trees';
+        if (b.type === 'fishery') return '🎣 Looking for fish';
+        return `⏳ Waiting for ${def.recipe?.input?.resource ?? 'input'}`;
       case 'producing': {
         const full = workTicksAtLevel(def.recipe!.workTicks, b.level);
         const pct = Math.max(0, Math.min(100, Math.round((1 - b.state.ticksLeft / full) * 100)));
@@ -438,7 +438,7 @@ async function start(): Promise<void> {
         `<span class="stat">${icon('i-wood')} ${w.stockpile.wood}</span>`,
         `<span class="stat">${icon('i-wheat')} ${w.stockpile.wheat}</span>`,
         `<span class="stat">${icon('i-flour')} ${w.stockpile.flour}</span>`,
-        `<span class="stat" title="Food in the granary (bread / apples / meat)">${icon('i-bread')} ${w.granaryFood.bread} ${icon('i-apple')} ${w.granaryFood.apples} ${icon('i-meat')} ${w.granaryFood.meat}</span>`,
+        `<span class="stat" title="Food in the granary (bread / apples / meat / fish)">${icon('i-bread')} ${w.granaryFood.bread} ${icon('i-apple')} ${w.granaryFood.apples} ${icon('i-meat')} ${w.granaryFood.meat} ${icon('i-fish')} ${w.granaryFood.fish}</span>`,
         `<span class="stat">👥 ${pop}/${housing}</span>`,
         `<span class="stat">❤️ ${w.popularity} (food ${w.lastFoodDelta >= 0 ? '+' : ''}${w.lastFoodDelta})</span>`,
         raidStat,

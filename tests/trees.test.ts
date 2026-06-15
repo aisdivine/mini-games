@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Sim } from '../src/sim/sim';
 import { createWorld, findNearestTree } from '../src/sim/world';
-import { TREE_REGROW_TICKS, TREE_WOOD } from '../src/config';
+import { MAP_W, MAP_H, TREE_CLEAR_RADIUS, TREE_REGROW_TICKS, TREE_WOOD } from '../src/config';
 
 function run(sim: Sim, ticks: number): void {
   for (let i = 0; i < ticks; i++) {
@@ -14,10 +14,10 @@ describe('trees', () => {
   it('worldgen scatters trees, all clear of the start area', () => {
     const w = createWorld(42);
     expect(w.trees.size).toBeGreaterThan(10);
-    const cx = 32;
-    const cy = 32;
+    const cx = MAP_W >> 1;
+    const cy = MAP_H >> 1;
     for (const t of w.trees.values()) {
-      expect(Math.hypot(t.tile.x - cx, t.tile.y - cy)).toBeGreaterThanOrEqual(9);
+      expect(Math.hypot(t.tile.x - cx, t.tile.y - cy)).toBeGreaterThanOrEqual(TREE_CLEAR_RADIUS);
       expect(t.wood).toBe(TREE_WOOD);
     }
   });

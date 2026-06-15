@@ -199,6 +199,26 @@ const SPECS: Record<BuildingType, ArtSpec> = {
       );
     },
   },
+  fishery: {
+    base: '#5a7f8c',
+    topMargin: 10,
+    detail: (g) => {
+      // a drying net stretched on the front face + a hanging fish
+      const n0 = lerp(g.B, g.R, 0.2);
+      const n1 = lerp(g.B, g.R, 0.62);
+      let net = '';
+      for (let i = 1; i < 4; i++) {
+        const t = i / 4;
+        net += line(lerp(n0, n1, 0), add(lerp(n0, n1, 1), { x: 0, y: -1 }), '#d8cdaa', 0.6);
+        net += line(add(lerp(n0, n1, t), { x: 0, y: 0 }), add(lerp(n0, n1, t), { x: 0, y: -12 }), '#d8cdaa', 0.6);
+      }
+      const fishAt = add(lerp(g.B, g.L, 0.5), { x: 0, y: -10 });
+      const fish =
+        poly([add(fishAt, { x: -5, y: 0 }), add(fishAt, { x: 1, y: -3 }), add(fishAt, { x: 6, y: 0 }), add(fishAt, { x: 1, y: 3 })], '#7fbfd8') +
+        poly([add(fishAt, { x: 5, y: 0 }), add(fishAt, { x: 9, y: -3 }), add(fishAt, { x: 9, y: 3 })], '#62a5c0');
+      return archDoor(g, 12) + net + fish;
+    },
+  },
   wheatFarm: {
     base: '#d9c878',
     topMargin: 6,

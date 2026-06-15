@@ -22,6 +22,12 @@
 <rect x="11.4" y="4" width="1.4" height="4" rx="0.6" fill="#6B4F30"/><path d="M13 5 Q18 3 17 7 Q14 8 13 5 Z" fill="#4E913F"/>
 <ellipse cx="9" cy="12" rx="2" ry="3" fill="#E8A89E" opacity="0.5"/>
 </symbol>
+<symbol id="i-fish" viewBox="0 0 24 24">
+<path d="M3 12 Q9 5 16 8 Q20 10 21 12 Q20 14 16 16 Q9 19 3 12 Z" fill="#6FB7D6"/>
+<path d="M3 12 Q6 10 9 12 Q6 14 3 12 Z" fill="#4E97B8"/>
+<path d="M16 8 Q12 11 16 16 Q14 12 16 8 Z" fill="#8FCBE4" opacity="0.7"/>
+<circle cx="17.5" cy="11" r="1" fill="#16323d"/>
+</symbol>
 <symbol id="i-meat" viewBox="0 0 24 24">
 <path d="M9 16 Q4 11 8 7 Q12 3 16 7 Q20 11 15 16 Q13 18 12 19 Z" fill="#9E5A3E"/>
 <path d="M9 16 Q6 13 8 9 Q10 13 12 16 Z" fill="#B56E4E" opacity="0.6"/>

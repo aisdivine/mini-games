@@ -22,9 +22,17 @@ Peaceful economy sandbox — raids are paused (`RAIDS_ENABLED = false`).
   binds one idle peasant who physically hauls goods through the stockpile.
   Workers stay visible and animated while working.
 - **Food:** all food goes to the **Granary**. The fastest sources are single
-  buildings — an **Apple Orchard** or **Hunter's Hut** — so build one early
-  instead of waiting on the whole bread chain. A **varied diet** (bread +
-  apples + meat) gives a bigger popularity boost than any single food.
+  buildings — an **Apple Orchard**, **Hunter's Hut**, or **Fisherman's Hut** —
+  so build one early instead of waiting on the whole bread chain. A **varied
+  diet** (bread + apples + meat + fish) gives a bigger popularity boost than any
+  single food.
+- **Fishing:** build a **Fisherman's Hut** near the **pond** (the blue water on
+  the eastern frontier). Its fisherman walks to the nearest shoal, casts from
+  the shore, and hauls fish back to the Granary. Shoals deplete and restock over
+  time, like trees — spread huts across the pond and stream for a steady catch.
+- **The land:** the map is a wide frontier with natural features — a rocky
+  **mountain** (impassable), a **stream**, and the fishing **pond**. You can't
+  build or walk on water or rock, so plan your layout (and walls) around them.
 - **Population:** peasants eat every 20s. Fed = popularity rises and
   immigrants arrive (build Houses for capacity). Starving = popularity falls
   and peasants leave. Popularity 0 = defeat.

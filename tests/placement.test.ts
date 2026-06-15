@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { Sim } from '../src/sim/sim';
 import { canPlace } from '../src/sim/grid';
-import { BUILDINGS } from '../src/config';
+import { BUILDINGS, MAP_W, MAP_H } from '../src/config';
 
 describe('building placement', () => {
   it('rejects out-of-bounds and overlapping footprints', () => {
     const sim = new Sim(7);
     const w = sim.world;
     expect(canPlace(w, BUILDINGS.house, { x: -1, y: 5 })).toBe(false);
-    expect(canPlace(w, BUILDINGS.house, { x: 63, y: 63 })).toBe(false);
+    expect(canPlace(w, BUILDINGS.house, { x: MAP_W - 1, y: MAP_H - 1 })).toBe(false);
     // overlapping the pre-placed keep
     const keep = w.buildings.get(w.keepId)!;
     expect(canPlace(w, BUILDINGS.house, { ...keep.tile })).toBe(false);

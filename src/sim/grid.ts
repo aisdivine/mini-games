@@ -1,4 +1,4 @@
-import { BUILDINGS, MAP_W, MAP_H, type BuildingDef } from '../config';
+import { BUILDINGS, MAP_W, MAP_H, T_GRASS, type BuildingDef } from '../config';
 import type { Vec2, World } from './world';
 
 export function idx(tx: number, ty: number): number {
@@ -9,8 +9,11 @@ export function inBounds(tx: number, ty: number): boolean {
   return tx >= 0 && ty >= 0 && tx < MAP_W && ty < MAP_H;
 }
 
+/** Grass with nothing built on it. Water and rock are natural obstacles. */
 export function isPassable(world: World, tx: number, ty: number): boolean {
-  return inBounds(tx, ty) && world.occupancy[idx(tx, ty)] === 0;
+  if (!inBounds(tx, ty)) return false;
+  const i = idx(tx, ty);
+  return world.occupancy[i] === 0 && world.terrain[i] === T_GRASS;
 }
 
 /** Footprint fits, all tiles free, and (for worker buildings) the access tile
@@ -20,7 +23,9 @@ export function canPlace(world: World, def: BuildingDef, tile: Vec2): boolean {
   if (!inBounds(tile.x, tile.y) || !inBounds(tile.x + w - 1, tile.y + h - 1)) return false;
   for (let dy = 0; dy < h; dy++) {
     for (let dx = 0; dx < w; dx++) {
-      if (world.occupancy[idx(tile.x + dx, tile.y + dy)] !== 0) return false;
+      const i = idx(tile.x + dx, tile.y + dy);
+      if (world.occupancy[i] !== 0) return false;
+      if (world.terrain[i] !== T_GRASS) return false; // no building on water/rock
     }
   }
   // Access tile: just outside the east corner, orthogonally adjacent.

@@ -16,6 +16,7 @@ export const RESOURCE_COLORS: Record<Resource, number> = {
   bread: 0xc97b4a,
   apples: 0xd0432f,
   meat: 0x9c4a3a,
+  fish: 0x6fb7d6,
 };
 
 export interface UnitView {

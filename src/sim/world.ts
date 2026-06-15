@@ -4,12 +4,16 @@
 import {
   BUILDINGS,
   EAT_INTERVAL_TICKS,
+  FISH_STOCK,
   IMMIGRATION_INTERVAL_TICKS,
   MAP_W,
   MAP_H,
   POPULARITY_START,
   STARTING_PEASANTS,
   STARTING_WOOD,
+  T_GRASS,
+  T_ROCK,
+  T_WATER,
   TREE_CLEAR_RADIUS,
   TREE_CLUSTERS,
   TREE_PER_CLUSTER,
@@ -18,8 +22,9 @@ import {
   type FoodType,
   type Resource,
   type StockResource,
+  type Terrain,
 } from '../config';
-import { idx } from './grid';
+import { idx, isPassable } from './grid';
 import { nextInt } from './rng';
 
 export interface Vec2 {
@@ -98,6 +103,13 @@ export interface Tree {
   regrowAt: number | null; // tick at which a stump becomes a tree again
 }
 
+export interface Fish {
+  id: number;
+  tile: Vec2; // a water tile
+  fish: number; // catches remaining; 0 == fished out
+  regrowAt: number | null; // tick at which an empty shoal restocks
+}
+
 export interface RaidState {
   triggered: boolean;
   spawnedCount: number;
@@ -109,9 +121,12 @@ export interface World {
   gridVersion: number;
   /** Building id + 1 per tile; 0 = free. Buildings and walls block movement. */
   occupancy: Uint32Array;
+  /** Land type per tile (T_GRASS/T_WATER/T_ROCK). Water + rock are impassable. */
+  terrain: Uint8Array;
   buildings: Map<number, Building>;
   units: Map<number, Unit>;
   trees: Map<number, Tree>;
+  fish: Map<number, Fish>;
   stockpile: Record<StockResource, number>;
   granaryFood: Record<FoodType, number>;
   reservations: Reservation[];
@@ -134,11 +149,13 @@ export function createWorld(seed: number): World {
     rngState: seed | 0,
     gridVersion: 0,
     occupancy: new Uint32Array(MAP_W * MAP_H),
+    terrain: new Uint8Array(MAP_W * MAP_H), // all grass (T_GRASS === 0)
     buildings: new Map(),
     units: new Map(),
     trees: new Map(),
+    fish: new Map(),
     stockpile: { wood: STARTING_WOOD, wheat: 0, flour: 0 },
-    granaryFood: { bread: 8, apples: 6, meat: 0 },
+    granaryFood: { bread: 8, apples: 6, meat: 0, fish: 0 },
     reservations: [],
     workerWanted: [],
     popularity: POPULARITY_START,
@@ -165,8 +182,118 @@ export function createWorld(seed: number): World {
     spawnUnit(world, 'peasant', { x: world.campfireTile.x + (i % 2), y: world.campfireTile.y + (i >> 1) }, 50);
   }
 
+  generateTerrain(world, cx, cy);
   scatterTrees(world, cx, cy);
   return world;
+}
+
+// ---------------------------------------------------------------------------
+// Natural terrain: a rocky mountain, a stream running down from it, and a
+// fishing pond. All features are kept on the eastern frontier and clear of the
+// protected start ring so the keep, stockpile and their access tiles stay open.
+// ---------------------------------------------------------------------------
+
+const START_PROTECT_RADIUS = 10;
+
+/** Carve one terrain tile, but never over the start ring, a building, or a
+ *  tile west of the frontier line (keeps the spawn side open). */
+function carve(world: World, x: number, y: number, type: Terrain, cx: number, cy: number): boolean {
+  if (x < 50 || x < 2 || y < 2 || x >= MAP_W - 2 || y >= MAP_H - 2) return false;
+  if (Math.hypot(x - cx, y - cy) < START_PROTECT_RADIUS) return false;
+  const i = idx(x, y);
+  if (world.occupancy[i] !== 0) return false;
+  world.terrain[i] = type;
+  return true;
+}
+
+function generateTerrain(world: World, cx: number, cy: number): void {
+  // Mountain: a rocky blob in the north-east, taller toward its center.
+  const mx = cx + 24;
+  const my = cy - 24;
+  const mr = 7;
+  for (let dy = -mr; dy <= mr; dy++) {
+    for (let dx = -mr; dx <= mr; dx++) {
+      const d = Math.hypot(dx, dy);
+      // ragged edge via the world RNG so it isn't a perfect circle
+      if (d <= mr - 1 || (d <= mr && nextInt(world, 3) === 0)) {
+        carve(world, mx + dx, my + dy, T_ROCK, cx, cy);
+      }
+    }
+  }
+
+  // Stream: a 1–2 tile brook meandering from the foot of the mountain down to
+  // the pond, wandering left/right as it descends.
+  const px = cx + 12;
+  const py = cy + 8;
+  let sx = mx;
+  for (let sy = my + mr; sy <= py; sy++) {
+    // ease the column toward the pond's x, plus a little random wander
+    sx += Math.sign(px - sx) * (nextInt(world, 2) === 0 ? 1 : 0) + (nextInt(world, 3) - 1);
+    carve(world, sx, sy, T_WATER, cx, cy);
+    if (nextInt(world, 2) === 0) carve(world, sx + 1, sy, T_WATER, cx, cy);
+  }
+
+  // Pond: an irregular blob of water. Fish shoals are seeded on its tiles.
+  const pr = 4;
+  for (let dy = -pr; dy <= pr; dy++) {
+    for (let dx = -pr; dx <= pr; dx++) {
+      const d = Math.hypot(dx, dy * 1.3);
+      if (d <= pr - 1 || (d <= pr && nextInt(world, 3) !== 0)) {
+        carve(world, px + dx, py + dy, T_WATER, cx, cy);
+      }
+    }
+  }
+
+  seedFish(world);
+}
+
+/** Drop a few fish shoals onto water tiles that have a reachable shore so a
+ *  fisherman can actually stand beside them. Deterministic scan order. */
+function seedFish(world: World): void {
+  const candidates: Vec2[] = [];
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      if (world.terrain[idx(x, y)] !== T_WATER) continue;
+      if (shoreTileNear(world, { x, y })) candidates.push({ x, y });
+    }
+  }
+  // space shoals out: take every Nth shore-adjacent water tile, up to a cap.
+  const step = Math.max(1, Math.floor(candidates.length / 7));
+  for (let i = 0; i < candidates.length; i += step) {
+    const id = world.nextId++;
+    world.fish.set(id, { id, tile: candidates[i], fish: FISH_STOCK, regrowAt: null });
+  }
+}
+
+/** Nearest passable land tile adjacent (incl. diagonals) to a water tile —
+ *  where a fisherman stands to cast. Null if the shoal is landlocked. */
+export function shoreTileNear(world: World, water: Vec2): Vec2 | null {
+  const ring = [
+    { x: 0, y: 1 }, { x: 0, y: -1 }, { x: 1, y: 0 }, { x: -1, y: 0 },
+    { x: 1, y: 1 }, { x: -1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: -1 },
+  ];
+  for (const o of ring) {
+    const tx = water.x + o.x;
+    const ty = water.y + o.y;
+    if (isPassable(world, tx, ty)) return { x: tx, y: ty };
+  }
+  return null;
+}
+
+/** Nearest restockable shoal with a reachable shore. Tiebreak by id. */
+export function findNearestFish(world: World, from: Vec2): Fish | null {
+  let best: Fish | null = null;
+  let bestDist = Infinity;
+  for (const f of world.fish.values()) {
+    if (f.fish <= 0) continue;
+    if (!shoreTileNear(world, f.tile)) continue;
+    const d = Math.abs(f.tile.x - from.x) + Math.abs(f.tile.y - from.y);
+    if (d < bestDist || (d === bestDist && best && f.id < best.id)) {
+      bestDist = d;
+      best = f;
+    }
+  }
+  return best;
 }
 
 /** Sprinkle clusters of trees across the map, keeping the start area clear. */
@@ -189,6 +316,7 @@ function scatterTrees(world: World, cx: number, cy: number): void {
       if (tx < margin || ty < margin || tx >= MAP_W - margin || ty >= MAP_H - margin) continue;
       const key = ty * MAP_W + tx;
       if (occupied.has(key) || world.occupancy[key] !== 0) continue;
+      if (world.terrain[key] !== T_GRASS) continue; // no trees on water/rock
       if (Math.hypot(tx - cx, ty - cy) < TREE_CLEAR_RADIUS) continue;
       occupied.add(key);
       const id = world.nextId++;

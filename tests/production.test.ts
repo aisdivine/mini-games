@@ -44,6 +44,17 @@ describe('production chain', () => {
     expect(sim.world.granaryFood.meat).toBeGreaterThan(0);
   });
 
+  it('fishery sends a fisherman to the pond and stocks the granary with fish', () => {
+    const sim = makeSim();
+    // the pond/shoals sit on the eastern frontier; build just west of it
+    sim.enqueue({ type: 'placeBuilding', building: 'granary', tile: { x: 44, y: 56 } });
+    sim.enqueue({ type: 'placeBuilding', building: 'fishery', tile: { x: 47, y: 56 } });
+    sim.tick();
+    expect([...sim.world.fish.values()].length).toBeGreaterThan(0); // shoals exist
+    run(sim, 6000);
+    expect(sim.world.granaryFood.fish).toBeGreaterThan(0);
+  });
+
   it('full bread chain: farm -> mill -> bakery -> granary', () => {
     const sim = makeSim();
     sim.enqueue({ type: 'placeBuilding', building: 'wheatFarm', tile: { x: 26, y: 36 } });

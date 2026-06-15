@@ -4,8 +4,19 @@
 
 export const TILE_W = 64;
 export const TILE_H = 32;
-export const MAP_W = 64;
-export const MAP_H = 64;
+export const MAP_W = 96;
+export const MAP_H = 96;
+
+// ---------------------------------------------------------------------------
+// Terrain — a per-tile land type layer underneath occupancy. Grass is the only
+// passable, buildable type; water and rock are natural obstacles you build
+// around (and water is where fish live).
+// ---------------------------------------------------------------------------
+
+export const T_GRASS = 0;
+export const T_WATER = 1;
+export const T_ROCK = 2;
+export type Terrain = typeof T_GRASS | typeof T_WATER | typeof T_ROCK;
 
 export const SIM_TICKS_PER_SEC = 20;
 export const SIM_DT_MS = 1000 / SIM_TICKS_PER_SEC;
@@ -28,10 +39,10 @@ export const DEMOLISH_REFUND = 0.5;
 // Resources & buildings
 // ---------------------------------------------------------------------------
 
-export type Resource = 'wood' | 'wheat' | 'flour' | 'bread' | 'apples' | 'meat';
+export type Resource = 'wood' | 'wheat' | 'flour' | 'bread' | 'apples' | 'meat' | 'fish';
 export type StockResource = 'wood' | 'wheat' | 'flour'; // stored in the stockpile
-export type FoodType = 'bread' | 'apples' | 'meat'; // stored in the granary
-export const FOOD_TYPES: FoodType[] = ['bread', 'apples', 'meat'];
+export type FoodType = 'bread' | 'apples' | 'meat' | 'fish'; // stored in the granary
+export const FOOD_TYPES: FoodType[] = ['bread', 'apples', 'meat', 'fish'];
 
 export type BuildingType =
   | 'keep'
@@ -42,6 +53,7 @@ export type BuildingType =
   | 'woodcutter'
   | 'appleOrchard'
   | 'hunter'
+  | 'fishery'
   | 'wheatFarm'
   | 'mill'
   | 'bakery'
@@ -107,6 +119,14 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     buildable: true, color: 0x8a6240, height: 24,
     recipe: { output: { resource: 'meat', amount: 1, dest: 'granary' }, workTicks: 120 },
   },
+  // Coastal food source — must be built next to water. Its fisherman walks to
+  // the nearest fishing spot in a pond/stream, casts, and hauls fish back to
+  // the granary. Shoals deplete and slowly restock, like trees.
+  fishery: {
+    type: 'fishery', label: "Fisherman's Hut", size: { w: 2, h: 2 }, costWood: 9, hp: 100,
+    buildable: true, color: 0x4f7a8a, height: 22,
+    recipe: { output: { resource: 'fish', amount: 1, dest: 'granary' }, workTicks: 105 },
+  },
   wheatFarm: {
     type: 'wheatFarm', label: 'Wheat Farm', size: { w: 3, h: 3 }, costWood: 10, hp: 100,
     buildable: true, color: 0xd9c34a, height: 12,
@@ -168,11 +188,19 @@ export const REPATH_COOLDOWN_TICKS = 30;
 // Trees — harvest nodes that woodcutters walk out to and chop
 // ---------------------------------------------------------------------------
 
-export const TREE_CLUSTERS = 16;
+export const TREE_CLUSTERS = 28;
 export const TREE_PER_CLUSTER = 6;
 export const TREE_WOOD = 6; // chops before it becomes a stump
 export const TREE_REGROW_TICKS = 1000; // stump -> tree (~50s)
 export const TREE_CLEAR_RADIUS = 9; // keep the start area around the keep clear
+
+// ---------------------------------------------------------------------------
+// Fish — harvest nodes that live on water tiles. A fisherman stands on the
+// shore beside one and catches fish; depleted shoals restock over time.
+// ---------------------------------------------------------------------------
+
+export const FISH_STOCK = 6; // catches before a shoal is fished out
+export const FISH_REGROW_TICKS = 1200; // empty shoal -> restocked (~60s)
 
 // ---------------------------------------------------------------------------
 // Population & popularity (M4)

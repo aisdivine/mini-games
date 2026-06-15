@@ -2,13 +2,14 @@
 // machine. The rest of the cycle is driven by the bound worker in units.ts;
 // building.state mirrors it for the HUD.
 
-import { TREE_WOOD } from '../config';
+import { FISH_STOCK, TREE_WOOD } from '../config';
 import type { SimEvent } from './events';
 import type { World } from './world';
 
 export function updateBuildings(world: World, _events: SimEvent[]): void {
   assignWorkers(world);
   regrowTrees(world);
+  restockFish(world);
 }
 
 // Stumps grow back into trees after their regrow timer, keeping the forest
@@ -18,6 +19,17 @@ function regrowTrees(world: World): void {
     if (tree.regrowAt !== null && world.tick >= tree.regrowAt) {
       tree.wood = TREE_WOOD;
       tree.regrowAt = null;
+    }
+  }
+}
+
+// Fished-out shoals restock after their timer — same sustainability trick as
+// the forest, so a fishery is a renewable food source.
+function restockFish(world: World): void {
+  for (const shoal of world.fish.values()) {
+    if (shoal.regrowAt !== null && world.tick >= shoal.regrowAt) {
+      shoal.fish = FISH_STOCK;
+      shoal.regrowAt = null;
     }
   }
 }

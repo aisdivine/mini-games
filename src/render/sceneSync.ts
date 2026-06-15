@@ -4,8 +4,9 @@
 // chop chips) off a render clock — never the sim.
 
 import { Container, Graphics, Sprite } from 'pixi.js';
+import { MAP_W, MAP_H, T_ROCK } from '../config';
 import type { SimEvent } from '../sim/events';
-import type { Tree, World } from '../sim/world';
+import type { Fish, Tree, World } from '../sim/world';
 import type { ArtTextures } from './assets';
 import { tileToScreen } from './iso';
 import { createBuildingView, type BuildingView } from './views/buildingView';
@@ -25,10 +26,18 @@ interface TreeView {
   stump: boolean;
 }
 
+interface FishView {
+  container: Container;
+  sprite: Sprite;
+  empty: boolean;
+}
+
 export class SceneSync {
   private buildingViews = new Map<number, BuildingView>();
   private unitViews = new Map<number, UnitView>();
   private treeViews = new Map<number, TreeView>();
+  private fishViews = new Map<number, FishView>();
+  private sceneryBuilt = false;
   private effects: Effect[] = [];
   private clock = 0; // ms, render-only
   /** last swing sign per working woodcutter, to spawn one chip per downstroke */
@@ -44,11 +53,91 @@ export class SceneSync {
   update(world: World, events: SimEvent[], alpha: number, dtMs: number): void {
     this.clock += dtMs;
 
+    if (!this.sceneryBuilt) this.buildScenery(world);
     this.syncTrees(world);
+    this.syncFish(world);
     this.syncBuildings(world);
     this.syncUnits(world, alpha);
     this.handleEvents(events);
     this.tickEffects();
+  }
+
+  /** Static terrain decor (mountain peaks), placed once from the terrain layer.
+   *  Peaks are taller toward the mountain's center so the blob reads as a ridge
+   *  rather than a field of identical cones. */
+  private buildScenery(world: World): void {
+    this.sceneryBuilt = true;
+    const rocks: { x: number; y: number }[] = [];
+    let sumX = 0;
+    let sumY = 0;
+    for (let y = 0; y < MAP_H; y++) {
+      for (let x = 0; x < MAP_W; x++) {
+        if (world.terrain[y * MAP_W + x] === T_ROCK) {
+          rocks.push({ x, y });
+          sumX += x;
+          sumY += y;
+        }
+      }
+    }
+    if (rocks.length === 0) return;
+    const cx = sumX / rocks.length;
+    const cy = sumY / rocks.length;
+    const maxD = Math.max(1, ...rocks.map((r) => Math.hypot(r.x - cx, r.y - cy)));
+    const entry = this.art.get('mountain')!;
+    for (const r of rocks) {
+      const hash = ((r.x * 73856093) ^ (r.y * 19349663)) >>> 0;
+      const near = Math.hypot(r.x - cx, r.y - cy) < maxD * 0.45;
+      if (!near && hash % 5 !== 0) continue; // sparse peaks on the outskirts
+      const closeness = 1 - Math.hypot(r.x - cx, r.y - cy) / (maxD + 1);
+      const scale = 0.55 + closeness * 0.85; // center peaks ~1.4x, edge ~0.6x
+      const sprite = new Sprite(entry.texture);
+      sprite.position.set(-entry.anchor.x, -entry.anchor.y);
+      const container = new Container();
+      container.addChild(sprite);
+      container.scale.set(scale);
+      const p = tileToScreen(r.x + 0.5, r.y + 0.5);
+      container.position.set(p.x, p.y);
+      container.zIndex = r.x + r.y;
+      this.entityLayer.addChild(container);
+    }
+  }
+
+  private syncFish(world: World): void {
+    for (const [id, f] of world.fish) {
+      let view = this.fishViews.get(id);
+      if (!view) {
+        view = this.createFishView(f);
+        this.fishViews.set(id, view);
+        this.entityLayer.addChild(view.container);
+      }
+      const isEmpty = f.fish <= 0;
+      if (isEmpty !== view.empty) {
+        view.sprite.alpha = isEmpty ? 0.2 : 1; // faded ripple while restocking
+        view.empty = isEmpty;
+      }
+      // gentle bob/drift on the water surface
+      const t = this.clock * 0.003 + f.id * 1.3;
+      view.sprite.y = Math.sin(t) * 1.5;
+      view.sprite.x = Math.cos(t * 0.7) * 1.2;
+    }
+    for (const [id, view] of this.fishViews) {
+      if (!world.fish.has(id)) {
+        view.container.destroy({ children: true });
+        this.fishViews.delete(id);
+      }
+    }
+  }
+
+  private createFishView(f: Fish): FishView {
+    const entry = this.art.get('fish')!;
+    const sprite = new Sprite(entry.texture);
+    sprite.position.set(-entry.anchor.x, -entry.anchor.y);
+    const container = new Container();
+    container.addChild(sprite);
+    const p = tileToScreen(f.tile.x + 0.5, f.tile.y + 0.5);
+    container.position.set(p.x, p.y);
+    container.zIndex = f.tile.x + f.tile.y - 0.4;
+    return { container, sprite, empty: f.fish <= 0 };
   }
 
   private syncTrees(world: World): void {
@@ -128,6 +217,8 @@ export class SceneSync {
           const s = Math.sin(this.clock * 0.02 + phase);
           rot = s * 0.42; // axe swing
           this.maybeChip(u.id, s, p);
+        } else if (wp?.type === 'fishery') {
+          rot = Math.sin(this.clock * 0.0045 + phase) * 0.16; // slow rod cast/sway
         } else {
           bob = -Math.abs(Math.sin(this.clock * 0.013 + phase)) * 2.5; // labor bob
         }

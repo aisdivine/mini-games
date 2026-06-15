@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Sim } from '../src/sim/sim';
+import { MAP_H } from '../src/config';
 
 function run(sim: Sim, ticks: number): void {
   for (let i = 0; i < ticks; i++) {
@@ -48,11 +49,11 @@ describe('combat', () => {
     sim.world.stockpile.wood = 10000;
     // vertical wall sealing the east approach... full column
     const tiles = [];
-    for (let y = 0; y < 64; y++) tiles.push({ x: 45, y });
+    for (let y = 0; y < MAP_H; y++) tiles.push({ x: 46, y });
     sim.enqueue({ type: 'placeWalls', tiles });
     sim.tick();
     const wallCount = [...sim.world.buildings.values()].filter((b) => b.type === 'wall').length;
-    expect(wallCount).toBe(64);
+    expect(wallCount).toBe(MAP_H);
     sim.enqueue({ type: 'startRaid' });
     run(sim, 4000);
     // raiders must have chewed through at least one wall segment

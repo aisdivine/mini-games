@@ -3,7 +3,7 @@
 // physical count only changes at pickup (commit) — the HUD number always
 // matches what peasants are visibly doing.
 
-import type { Resource, StockResource } from '../config';
+import { FOOD_TYPES, type FoodType, type Resource, type StockResource } from '../config';
 import type { Building, World } from './world';
 
 export function availableStock(world: World, resource: StockResource): number {
@@ -41,10 +41,10 @@ export function releaseBuildingReservations(world: World, buildingId: number): v
 }
 
 export function deposit(world: World, resource: Resource, amount: number): void {
-  if (resource === 'bread' || resource === 'apples' || resource === 'meat') {
-    world.granaryFood[resource] += amount;
+  if ((FOOD_TYPES as Resource[]).includes(resource)) {
+    world.granaryFood[resource as FoodType] += amount;
   } else {
-    world.stockpile[resource] += amount;
+    world.stockpile[resource as StockResource] += amount;
   }
 }
 

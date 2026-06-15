@@ -8,15 +8,17 @@ import {
   REPATH_COOLDOWN_TICKS,
   UNIT_SPEED,
 } from '../config';
-import { TREE_REGROW_TICKS, workTicksAtLevel } from '../config';
+import { FISH_REGROW_TICKS, TREE_REGROW_TICKS, workTicksAtLevel } from '../config';
 import { reserve, commitReservation, deposit, findDepot } from './economy';
 import type { SimEvent } from './events';
 import { inBounds, isPassable } from './grid';
 import { findPath } from './pathfinding';
 import { nextRand, nextInt } from './rng';
 import {
+  findNearestFish,
   findNearestTree,
   resetToIdle,
+  shoreTileNear,
   unbindFromWorkplace,
   type Building,
   type TaskGoal,
@@ -169,6 +171,15 @@ function updatePeasant(world: World, unit: Unit, events: SimEvent[]): void {
         }
         unit.targetId = null;
       }
+      // Fishery: the catch comes off the shoal it was fishing.
+      if (workplace.type === 'fishery' && unit.targetId !== null) {
+        const shoal = world.fish.get(unit.targetId);
+        if (shoal && shoal.fish > 0) {
+          shoal.fish--;
+          if (shoal.fish <= 0) shoal.regrowAt = world.tick + FISH_REGROW_TICKS;
+        }
+        unit.targetId = null;
+      }
       unit.carrying = { resource: recipe.output.resource, amount: recipe.output.amount };
       dispatchDeliver(world, unit, workplace);
       return;
@@ -302,6 +313,21 @@ function dispatchFetchOrWork(world: World, unit: Unit, workplace: Building): voi
     unit.targetId = tree.id;
     workplace.state = { kind: 'producing', ticksLeft: workTicksAtLevel(recipe.workTicks, workplace.level) };
     unit.task = { kind: 'goTo', dest: workSpotNear(world, tree.tile), then: { kind: 'workHere' } };
+    return;
+  }
+
+  // Fishery: walk to the shore beside the nearest shoal and cast from there.
+  if (workplace.type === 'fishery') {
+    const shoal = findNearestFish(world, unit.pos);
+    const shore = shoal ? shoreTileNear(world, shoal.tile) : null;
+    if (!shoal || !shore) {
+      workplace.state = { kind: 'awaitingInput' }; // no reachable fish; retry
+      unit.task = { kind: 'waitRetry', what: 'input', cooldown: WAIT_RETRY_TICKS };
+      return;
+    }
+    unit.targetId = shoal.id;
+    workplace.state = { kind: 'producing', ticksLeft: workTicksAtLevel(recipe.workTicks, workplace.level) };
+    unit.task = { kind: 'goTo', dest: shore, then: { kind: 'workHere' } };
     return;
   }
 
