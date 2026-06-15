@@ -7,8 +7,6 @@ import {
   EDGE_PAN_SPEED,
   MAX_ACCUM_MS,
   MAX_BUILDING_LEVEL,
-  RAID_AT_TICK,
-  RAIDS_ENABLED,
   SIM_DT_MS,
   SIM_TICKS_PER_SEC,
   upgradeWoodCost,
@@ -145,6 +143,7 @@ async function start(): Promise<void> {
       })),
       { id: 'wall', label: `Wall (${BUILDINGS.wall.costWood}/tile)`, hint: 'Click-drag to draw' },
       { id: 'archer', label: `Archer (${ARCHER_COST_WOOD})`, hint: 'Recruited at the keep' },
+      { id: 'raids', label: '⚔ Raids: Off', hint: 'Toggle enemy raids on/off' },
       { id: 'demolish', label: 'Demolish', hint: 'Click a building to remove it (50% refund)' },
       { id: 'resetview', label: 'Reset View', hint: 'Re-center on the keep (Home / c)' },
       { id: 'save', label: '💾 Save', hint: 'Save your city now (also autosaves every 30s · S)' },
@@ -153,6 +152,8 @@ async function start(): Promise<void> {
     (id) => {
       if (id === 'archer') {
         sim.enqueue({ type: 'recruitArcher' });
+      } else if (id === 'raids') {
+        sim.enqueue({ type: 'setRaids', on: !sim.world.raidsEnabled });
       } else if (id === 'demolish') {
         setMode(mode.kind === 'demolish' ? { kind: 'select' } : { kind: 'demolish' });
       } else if (id === 'wall') {
@@ -457,24 +458,33 @@ async function start(): Promise<void> {
     const housing = housingCapacity(w);
     const raidIn = w.raid.triggered
       ? null
-      : Math.max(0, Math.ceil((RAID_AT_TICK - w.tick) / SIM_TICKS_PER_SEC));
+      : Math.max(0, Math.ceil((w.nextRaidTick - w.tick) / SIM_TICKS_PER_SEC));
     const mmss = raidIn !== null
       ? `${Math.floor(raidIn / 60)}:${String(raidIn % 60).padStart(2, '0')}`
       : null;
-    const raidStat = !RAIDS_ENABLED && !w.raid.triggered
-      ? `<span class="stat">☮ peaceful</span>`
-      : mmss ? `<span class="stat">⚔ raid in ${mmss}</span>` : `<span class="stat">⚔ raid!</span>`;
+    const raidStat = !w.raidsEnabled
+      ? `<span class="stat" title="Raids are off — peaceful sandbox. Toggle in the build menu.">☮ peaceful</span>`
+      : mmss
+        ? `<span class="stat" title="Time until the next enemy raid arrives from the east.">⚔ raid in ${mmss}</span>`
+        : `<span class="stat" title="A raid is underway — defend your keep!">⚔ raid!</span>`;
+    // keep the build-menu toggle's label in sync with the live state
+    hud.setButtonLabel(
+      'raids',
+      w.raidsEnabled ? '⚔ Raids: On' : '⚔ Raids: Off',
+      w.raidsEnabled ? 'Enemy raids enabled — click to return to peace' : 'No raids — click to enable enemy attacks',
+    );
     const icon = (id: string): string => `<svg class="hud-icon"><use href="#${id}"/></svg>`;
+    const t = (s: string): string => ` title="${s}"`;
     hud.setTopBar(
       [
-        `<span class="stat">${icon('i-wood')} ${w.stockpile.wood}</span>`,
-        `<span class="stat">${icon('i-wheat')} ${w.stockpile.wheat}</span>`,
-        `<span class="stat">${icon('i-flour')} ${w.stockpile.flour}</span>`,
-        `<span class="stat" title="Food in the granary (bread / apples / meat / fish)">${icon('i-bread')} ${w.granaryFood.bread} ${icon('i-apple')} ${w.granaryFood.apples} ${icon('i-meat')} ${w.granaryFood.meat} ${icon('i-fish')} ${w.granaryFood.fish}</span>`,
-        `<span class="stat">👥 ${pop}/${housing}</span>`,
-        `<span class="stat">❤️ ${w.popularity} (food ${w.lastFoodDelta >= 0 ? '+' : ''}${w.lastFoodDelta})</span>`,
+        `<span class="stat"${t('Wood — your main building material. Woodcutters chop it from trees.')}>${icon('i-wood')} ${w.stockpile.wood}</span>`,
+        `<span class="stat"${t('Wheat — grown on Wheat Farms, milled into flour.')}>${icon('i-wheat')} ${w.stockpile.wheat}</span>`,
+        `<span class="stat"${t('Flour — milled from wheat at the Mill, baked into bread.')}>${icon('i-flour')} ${w.stockpile.flour}</span>`,
+        `<span class="stat"${t('Food in the granary: bread / apples / meat / fish. Peasants eat every 20s; a varied diet boosts popularity.')}>${icon('i-bread')} ${w.granaryFood.bread} ${icon('i-apple')} ${w.granaryFood.apples} ${icon('i-meat')} ${w.granaryFood.meat} ${icon('i-fish')} ${w.granaryFood.fish}</span>`,
+        `<span class="stat"${t('Population / housing capacity. Build Houses to raise the cap so more peasants can move in.')}>👥 ${pop}/${housing}</span>`,
+        `<span class="stat"${t('Popularity — rises when peasants are fed (varied diet helps), falls when they starve. Hits 0 = you lose.')}>❤️ ${w.popularity} (food ${w.lastFoodDelta >= 0 ? '+' : ''}${w.lastFoodDelta})</span>`,
         raidStat,
-        `<span class="stat">${paused ? '⏸ paused' : `▶ ${speed}×`}</span>`,
+        `<span class="stat"${t('Game speed — 1/2/3 to change, Space to pause.')}>${paused ? '⏸ paused' : `▶ ${speed}×`}</span>`,
       ].join(''),
     );
 

@@ -8,6 +8,7 @@ import {
   BUILDINGS,
   DEMOLISH_REFUND,
   MAX_BUILDING_LEVEL,
+  RAID_AT_TICK,
   upgradeWoodCost,
   type BuildingType,
 } from '../config';
@@ -29,6 +30,7 @@ export type Command =
   | { type: 'moveUnit'; unitId: number; dest: Vec2 }
   | { type: 'recruitArcher' }
   | { type: 'startRaid' }
+  | { type: 'setRaids'; on: boolean }
   | { type: 'spawnPeasant' } // debug
   | { type: 'cheatWood'; amount: number }; // debug
 
@@ -135,6 +137,24 @@ export function applyCommand(world: World, cmd: Command, events: SimEvent[]): vo
 
     case 'startRaid': {
       world.raid.triggered = true;
+      return;
+    }
+
+    case 'setRaids': {
+      world.raidsEnabled = cmd.on;
+      if (cmd.on) {
+        // fresh countdown from now (unless a raid is already underway)
+        if (!world.raid.triggered) world.nextRaidTick = world.tick + RAID_AT_TICK;
+        events.push({ type: 'message', text: '⚔ Raids ON — defend your keep!' });
+      } else {
+        // back to peace: clear any active raiders and reset the wave
+        for (const u of [...world.units.values()]) {
+          if (u.role === 'raider') world.units.delete(u.id);
+        }
+        world.raid = { triggered: false, spawnedCount: 0 };
+        world.nextRaidTick = world.tick + RAID_AT_TICK;
+        events.push({ type: 'message', text: '☮ Raids OFF — peaceful sandbox' });
+      }
       return;
     }
 

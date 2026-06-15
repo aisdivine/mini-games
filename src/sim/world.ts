@@ -9,6 +9,8 @@ import {
   MAP_W,
   MAP_H,
   POPULARITY_START,
+  RAID_AT_TICK,
+  RAIDS_ENABLED,
   STARTING_PEASANTS,
   STARTING_WOOD,
   T_GRASS,
@@ -135,6 +137,10 @@ export interface World {
   lastFoodDelta: number; // for the HUD ("Food +2")
   nextEatTick: number;
   nextImmigrationTick: number;
+  /** Master raid switch (player-toggleable). When off, raids never trigger. */
+  raidsEnabled: boolean;
+  /** Tick the next auto-raid fires (reset whenever raids are switched on). */
+  nextRaidTick: number;
   raid: RaidState;
   outcome: 'playing' | 'won' | 'lost';
   outcomeReason: string;
@@ -162,6 +168,8 @@ export function createWorld(seed: number): World {
     lastFoodDelta: 0,
     nextEatTick: EAT_INTERVAL_TICKS,
     nextImmigrationTick: IMMIGRATION_INTERVAL_TICKS,
+    raidsEnabled: RAIDS_ENABLED,
+    nextRaidTick: RAID_AT_TICK,
     raid: { triggered: false, spawnedCount: 0 },
     outcome: 'playing',
     outcomeReason: '',

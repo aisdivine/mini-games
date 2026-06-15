@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { Sim } from '../src/sim/sim';
-import { MAP_H } from '../src/config';
+import { MAP_H, RAID_AT_TICK } from '../src/config';
+
+function raiderCount(sim: Sim): number {
+  return [...sim.world.units.values()].filter((u) => u.role === 'raider').length;
+}
 
 function run(sim: Sim, ticks: number): void {
   for (let i = 0; i < ticks; i++) {
@@ -42,6 +46,29 @@ describe('combat', () => {
     sim.enqueue({ type: 'startRaid' });
     run(sim, 10000);
     expect(sim.world.outcome).toBe('won');
+  });
+
+  it('raids are off by default — none auto-trigger', () => {
+    const sim = makeSim();
+    expect(sim.world.raidsEnabled).toBe(false);
+    run(sim, RAID_AT_TICK + 100);
+    expect(raiderCount(sim)).toBe(0);
+    expect(sim.world.raid.triggered).toBe(false);
+  });
+
+  it('toggling raids on schedules a wave; toggling off clears it', () => {
+    const sim = makeSim();
+    sim.enqueue({ type: 'setRaids', on: true });
+    sim.tick();
+    expect(sim.world.raidsEnabled).toBe(true);
+    run(sim, RAID_AT_TICK + 100); // countdown elapses → wave spawns
+    expect(raiderCount(sim)).toBeGreaterThan(0);
+
+    sim.enqueue({ type: 'setRaids', on: false });
+    sim.tick();
+    expect(sim.world.raidsEnabled).toBe(false);
+    expect(raiderCount(sim)).toBe(0); // back to peace
+    expect(sim.world.raid.triggered).toBe(false);
   });
 
   it('walled-out raiders attack walls instead of freezing', () => {

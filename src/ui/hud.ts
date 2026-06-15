@@ -51,6 +51,14 @@ export class Hud {
     }
   }
 
+  /** Update a build-menu button's label (and optional tooltip) in place. */
+  setButtonLabel(id: string, label: string, title?: string): void {
+    const btn = this.buttons.get(id);
+    if (!btn) return;
+    if (btn.textContent !== label) btn.textContent = label;
+    if (title !== undefined && btn.title !== title) btn.title = title;
+  }
+
   /** Volatile status text (safe to call every frame). */
   setInfo(html: string): void {
     this.info.style.display = html ? 'block' : 'none';
