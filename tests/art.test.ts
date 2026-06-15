@@ -45,15 +45,22 @@ describe('vector art registry', () => {
     expect(buildDecorAssets().tree.svg).toBe(buildDecorAssets().tree.svg);
   });
 
-  it('building art canvas covers the footprint diamond', () => {
+  it('building art is footprint-center anchored and scales to cover the footprint', () => {
+    // v2 pack contract: a fixed canvas with a footprint-center anchor, scaled at
+    // render time by (w+h)*16 / ART_BASE_HALF (see buildingView.buildingScale).
+    const ART_BASE_HALF = 30;
     const assets = buildBuildingAssets();
     for (const type of Object.keys(assets) as BuildingType[]) {
       const def = BUILDINGS[type];
       const a = assets[type];
+      const scale = ((def.size.w + def.size.h) * 16) / ART_BASE_HALF;
       const diamondW = (def.size.w + def.size.h) * 32;
       const diamondH = (def.size.w + def.size.h) * 16;
-      expect(a.width).toBeGreaterThanOrEqual(diamondW);
-      expect(a.height - a.anchor.y).toBeGreaterThanOrEqual(diamondH);
+      // canvas is horizontally centered on the footprint
+      expect(a.anchor.x).toBeCloseTo(a.width / 2, 1);
+      // scaled canvas covers the on-screen footprint diamond
+      expect(scale * a.width).toBeGreaterThanOrEqual(diamondW);
+      expect(scale * a.anchor.y).toBeGreaterThanOrEqual(diamondH);
     }
   });
 });

@@ -9,10 +9,10 @@ import type { SimEvent } from '../sim/events';
 import type { Fish, Tree, World } from '../sim/world';
 import type { ArtTextures } from './assets';
 import { tileToScreen } from './iso';
-import { createBuildingView, type BuildingView } from './views/buildingView';
-import { drawBuildingAnim } from './views/buildingAnim';
+import { animateBuilding, createBuildingView, type BuildingView } from './views/buildingView';
 import { createUnitView, tunicColorFor, type UnitView } from './views/unitView';
 import type { UnitTextures } from './unitTextures';
+import type { BuildingLayers } from './buildingLayers';
 
 interface Effect {
   g: Graphics;
@@ -48,6 +48,7 @@ export class SceneSync {
     private effectLayer: Container,
     private art: ArtTextures,
     private units: UnitTextures,
+    private layers: BuildingLayers,
   ) {}
 
   update(world: World, events: SimEvent[], alpha: number, dtMs: number): void {
@@ -178,11 +179,11 @@ export class SceneSync {
     for (const [id, b] of world.buildings) {
       let view = this.buildingViews.get(id);
       if (!view) {
-        view = createBuildingView(b, this.art);
+        view = createBuildingView(b, this.art, this.layers);
         this.buildingViews.set(id, view);
         this.entityLayer.addChild(view.container);
       }
-      drawBuildingAnim(view.anim, b, this.clock);
+      animateBuilding(view, b, this.clock);
     }
     for (const [id, view] of this.buildingViews) {
       if (!world.buildings.has(id)) {
