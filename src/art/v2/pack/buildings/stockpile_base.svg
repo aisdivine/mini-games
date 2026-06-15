@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="130" height="126" viewBox="0 0 130 126" data-anchor="65,96" data-footprint="3x3">
+<ellipse cx="65" cy="118" rx="44" ry="10" fill="#00000018"/>
+<polygon points="16,101 65,126 65,121 16,96" fill="#5A4228"/><polygon points="65,126 114,101 114,96 65,121" fill="#4A3622"/>
+<polygon points="65,71 114,96 65,121 16,96" fill="#8A6A3E"/>
+<line x1="40" y1="83" x2="89" y2="109" stroke="#6E5430" stroke-width="0.8"/><line x1="52" y1="77" x2="101" y2="103" stroke="#6E5430" stroke-width="0.8"/><line x1="28" y1="90" x2="77" y2="115" stroke="#6E5430" stroke-width="0.8"/>
+<polygon points="44,86 56,92 56,101 44,95" fill="#9C7B3E"/><polygon points="56,92 68,86 68,95 56,101" fill="#7A5C2E"/><polygon points="44,86 56,80 68,86 56,92" fill="#B89A5E"/><line x1="50" y1="83" x2="50" y2="98" stroke="#6E5430" stroke-width="0.6"/>
+<ellipse cx="82" cy="98" rx="8" ry="6" fill="#D9C58E"/><path d="M77 92 L87 92 L82 97 Z" fill="#B89E5E"/><ellipse cx="74" cy="103" rx="7" ry="5" fill="#CDB67E"/>
+<ellipse cx="62" cy="106" rx="9" ry="3" fill="#A8854A"/><ellipse cx="62" cy="104" rx="9" ry="3" fill="#C9A86A"/>
+</svg>

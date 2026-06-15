@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="12" viewBox="0 0 40 12" data-anchor="38,6" data-note="rotate to travel direction; anchor at tip">
+<line x1="6" y1="6" x2="34" y2="6" stroke="#7A5C38" stroke-width="1.6"/>
+<polygon points="40,6 33,3 33,9" fill="#AEB4BA"/>
+<path d="M6 6 L1 2 M6 6 L1 10 M9 6 L4 3 M9 6 L4 9" stroke="#E8DFC8" stroke-width="1" stroke-linecap="round"/>
+</svg>

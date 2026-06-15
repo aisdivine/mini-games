@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="display:none">
+<symbol id="i-wood" viewBox="0 0 24 24">
+<ellipse cx="9" cy="10" rx="6" ry="4.5" fill="#A8854A"/><ellipse cx="9" cy="9" rx="6" ry="4.5" fill="#C9A86A"/><ellipse cx="9" cy="9" rx="2.6" ry="1.9" fill="none" stroke="#9A7A42" stroke-width="0.8"/>
+<ellipse cx="15" cy="14" rx="6" ry="4.5" fill="#8A6A3E"/><ellipse cx="15" cy="13" rx="6" ry="4.5" fill="#B89A5E"/><ellipse cx="15" cy="13" rx="2.6" ry="1.9" fill="none" stroke="#876A38" stroke-width="0.8"/>
+</symbol>
+<symbol id="i-wheat" viewBox="0 0 24 24">
+<line x1="12" y1="22" x2="12" y2="9" stroke="#A87E22" stroke-width="1.4"/><line x1="12" y1="14" x2="7" y2="9" stroke="#A87E22" stroke-width="1.2"/><line x1="12" y1="14" x2="17" y2="9" stroke="#A87E22" stroke-width="1.2"/>
+<ellipse cx="12" cy="6" rx="2.4" ry="4" fill="#E8C45A"/><ellipse cx="7" cy="7" rx="2" ry="3.4" fill="#F0CE66"/><ellipse cx="17" cy="7" rx="2" ry="3.4" fill="#F0CE66"/>
+</symbol>
+<symbol id="i-flour" viewBox="0 0 24 24">
+<path d="M6 21 Q5 9 8 8 Q12 6.5 16 8 Q19 9 18 21 Z" fill="#EDE6D4"/><path d="M12 7.5 L12 21" stroke="#D8CFB8" stroke-width="1"/>
+<path d="M8 8 Q12 5 16 8 Q12 9.5 8 8 Z" fill="#D8CFB8"/>
+<circle cx="14" cy="5" r="1.4" fill="#cfcfcf" opacity="0.7"/><circle cx="17" cy="4" r="1" fill="#dadada" opacity="0.6"/>
+</symbol>
+<symbol id="i-bread" viewBox="0 0 24 24">
+<ellipse cx="12" cy="14" rx="9" ry="6.5" fill="#C98A3E"/><ellipse cx="12" cy="12.5" rx="9" ry="6.5" fill="#E0A85A"/>
+<path d="M7 11 L9 14 M11 10.5 L13 14 M15 11 L17 14" stroke="#A86A2E" stroke-width="1" stroke-linecap="round"/>
+</symbol>
+<symbol id="i-apple" viewBox="0 0 24 24">
+<path d="M12 8 Q5 7 5 14 Q5 21 12 21 Q19 21 19 14 Q19 7 12 8 Z" fill="#C0392B"/>
+<path d="M12 8 Q9 7 8 11 Q8 16 12 20 Q9 14 12 8 Z" fill="#D44B3A" opacity="0.6"/>
+<rect x="11.4" y="4" width="1.4" height="4" rx="0.6" fill="#6B4F30"/><path d="M13 5 Q18 3 17 7 Q14 8 13 5 Z" fill="#4E913F"/>
+<ellipse cx="9" cy="12" rx="2" ry="3" fill="#E8A89E" opacity="0.5"/>
+</symbol>
+<symbol id="i-meat" viewBox="0 0 24 24">
+<path d="M9 16 Q4 11 8 7 Q12 3 16 7 Q20 11 15 16 Q13 18 12 19 Z" fill="#9E5A3E"/>
+<path d="M9 16 Q6 13 8 9 Q10 13 12 16 Z" fill="#B56E4E" opacity="0.6"/>
+<path d="M12 18 L16 22" stroke="#EDE0C8" stroke-width="3" stroke-linecap="round"/><circle cx="16.5" cy="22" r="2" fill="#EDE0C8"/>
+</symbol>
+</svg>

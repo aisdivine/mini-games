@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="130" height="126" viewBox="0 0 130 126" data-anchor="65,92" data-footprint="2x2">
+<ellipse cx="65" cy="105" rx="33" ry="8" fill="#00000022"/>
+<polygon points="35,70 65,85 65,107 35,92" fill="#5A7E8A"/>
+<polygon points="65,85 95,70 95,92 65,107" fill="#46626E"/>
+<polygon points="35,70 65,85 65,48" fill="#6E94A0"/><polygon points="65,85 95,70 65,48" fill="#557480"/>
+<line x1="50" y1="77" x2="65" y2="67" stroke="#557480" stroke-width="0.6"/><line x1="80" y1="77" x2="65" y2="67" stroke="#3E5862" stroke-width="0.6"/>
+<path d="M44 105 L44 92 Q49 88 54 92 L54 102 Z" fill="#243038"/>
+<g stroke="#D8CDAA" stroke-width="0.5" opacity="0.85" fill="none">
+<line x1="70" y1="86" x2="70" y2="102"/><line x1="76" y1="83" x2="76" y2="99"/><line x1="82" y1="80" x2="82" y2="96"/><line x1="88" y1="77" x2="88" y2="93"/>
+<line x1="69" y1="88" x2="89" y2="79"/><line x1="69" y1="93" x2="89" y2="84"/><line x1="69" y1="98" x2="89" y2="89"/>
+</g>
+<g transform="translate(58,96)"><path d="M-6 0 L1 -4 L7 0 L1 4 Z" fill="#7FBFD8"/><path d="M6 0 L11 -4 L11 4 Z" fill="#62A5C0"/><circle cx="-2" cy="-1" r="0.9" fill="#16323d"/></g>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="130" height="126" viewBox="0 0 130 126" data-anchor="65,90" data-pivot="85.5,78.5">
+<g id="sails">
+<rect x="84" y="62" width="3" height="34" fill="#5A4228"/><rect x="68" y="77" width="34" height="3" fill="#6B4F30"/>
+<line x1="85.5" y1="62" x2="85.5" y2="96" stroke="#D9C58E" stroke-width="0.6"/><line x1="68" y1="78.5" x2="102" y2="78.5" stroke="#D9C58E" stroke-width="0.6"/>
+<circle cx="85.5" cy="78.5" r="3" fill="#3A2A19"/>
+</g>
+</svg>

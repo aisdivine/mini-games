@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="50" height="100" viewBox="0 0 50 100" data-anchor="25,94" data-pivot="25,40">
+<defs><radialGradient id="tgl" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#FFCF6A"/><stop offset="100%" stop-color="#FFCF6A" stop-opacity="0"/></radialGradient><radialGradient id="tfl" cx="50%" cy="75%" r="65%"><stop offset="0%" stop-color="#FFF1A8"/><stop offset="55%" stop-color="#F6A12B"/><stop offset="100%" stop-color="#C0391C"/></radialGradient></defs>
+<circle id="glow" cx="25" cy="30" r="26" fill="url(#tgl)" opacity="0.6"/>
+<g id="flame"><path d="M17 40 Q13 20 25 8 Q37 20 33 40 Q28 30 25 40 Q22 30 17 40 Z" fill="url(#tfl)"/><path d="M21 40 Q19 26 25 18 Q31 26 29 40 Z" fill="#FFE38A"/></g>
+</svg>

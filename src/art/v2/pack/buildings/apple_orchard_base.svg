@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="130" height="126" viewBox="0 0 130 126" data-anchor="65,96" data-footprint="3x3">
+<polygon points="65,71 114,96 65,121 16,96" fill="#5FA84E" stroke="#3F7A3C" stroke-width="0.5"/><polygon points="65,71 114,96 65,121" fill="#4E913F" opacity="0.45"/>
+<g><rect x="40" y="84" width="3" height="7" fill="#6B4F30"/><ellipse cx="41.5" cy="81" rx="8" ry="6" fill="#3F7A3C"/><ellipse cx="41.5" cy="79" rx="6" ry="5" fill="#4E913F"/><circle cx="39" cy="79" r="1.4" fill="#C0392B"/><circle cx="44" cy="81" r="1.4" fill="#C0392B"/></g>
+<g><rect x="72" y="94" width="3" height="7" fill="#6B4F30"/><ellipse cx="73.5" cy="91" rx="8" ry="6" fill="#3F7A3C"/><ellipse cx="73.5" cy="89" rx="6" ry="5" fill="#4E913F"/><circle cx="71" cy="89" r="1.4" fill="#C0392B"/><circle cx="76" cy="91" r="1.4" fill="#C0392B"/></g>
+<g><rect x="86" y="84" width="3" height="7" fill="#6B4F30"/><ellipse cx="87.5" cy="81" rx="8" ry="6" fill="#3F7A3C"/><ellipse cx="87.5" cy="79" rx="6" ry="5" fill="#4E913F"/><circle cx="85" cy="79" r="1.4" fill="#C0392B"/><circle cx="90" cy="81" r="1.4" fill="#C0392B"/></g>
+<g><rect x="54" y="100" width="3" height="7" fill="#6B4F30"/><ellipse cx="55.5" cy="97" rx="8" ry="6" fill="#3F7A3C"/><ellipse cx="55.5" cy="95" rx="6" ry="5" fill="#4E913F"/><circle cx="53" cy="95" r="1.4" fill="#C0392B"/><circle cx="58" cy="97" r="1.4" fill="#C0392B"/></g>
+</svg>

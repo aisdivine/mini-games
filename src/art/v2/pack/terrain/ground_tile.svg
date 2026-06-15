@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="32" viewBox="0 0 64 32" data-anchor="32,16">
+<defs>
+<symbol id="tileA" viewBox="0 0 64 32"><polygon points="32,1 63,16 32,31 1,16" fill="#E6D49C" stroke="#C9B377" stroke-width="0.5"/><polygon points="32,1 63,16 32,31" fill="#D8C386" opacity="0.45"/></symbol>
+<symbol id="tileB" viewBox="0 0 64 32"><polygon points="32,1 63,16 32,31 1,16" fill="#DECB8E" stroke="#C9B377" stroke-width="0.5"/><polygon points="32,1 63,16 32,31" fill="#D0BA7C" opacity="0.45"/></symbol>
+</defs>
+<use href="#tileA" x="0" y="0"/>
+</svg>
