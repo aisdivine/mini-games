@@ -5,6 +5,7 @@ import {
   BUILDINGS,
   EDGE_PAN_MARGIN,
   EDGE_PAN_SPEED,
+  MARKET_GOODS,
   MAX_ACCUM_MS,
   MAX_BUILDING_LEVEL,
   SIM_DT_MS,
@@ -12,11 +13,13 @@ import {
   upgradeWoodCost,
   workTicksAtLevel,
   type BuildingType,
+  type Resource,
 } from './config';
 import { Sim } from './sim/sim';
 import type { SimEvent } from './sim/events';
 import { canPlace, isPassable } from './sim/grid';
 import { housingCapacity, populationCount } from './sim/population';
+import { resourceCount } from './sim/economy';
 import { deserializeWorld, serializeWorld } from './sim/save';
 import { buildingAt, type Building, type Unit, type Vec2 } from './sim/world';
 import { createApp } from './render/app';
@@ -65,8 +68,14 @@ type Selection =
   | { kind: 'building'; id: number };
 
 const BUILD_ORDER: BuildingType[] = [
-  'house', 'granary', 'appleOrchard', 'hunter', 'fishery', 'woodcutter', 'wheatFarm', 'mill', 'bakery', 'tower',
+  'house', 'granary', 'appleOrchard', 'hunter', 'fishery', 'woodcutter', 'wheatFarm', 'mill', 'bakery', 'market', 'tower',
 ];
+
+// HUD resource icon id for a tradeable resource.
+const RESOURCE_ICON: Record<Resource, string> = {
+  wood: 'i-wood', wheat: 'i-wheat', flour: 'i-flour',
+  bread: 'i-bread', apples: 'i-apple', meat: 'i-meat', fish: 'i-fish',
+};
 
 async function start(): Promise<void> {
   const { app, layers } = await createApp();
@@ -203,6 +212,17 @@ async function start(): Promise<void> {
         speed = speed === 1 ? 2 : speed === 2 ? 4 : 1;
       }
     },
+  );
+
+  // Market trade panel (shown when a Market is selected).
+  hud.buildMarket(
+    MARKET_GOODS.map((g) => ({
+      id: g.resource,
+      label: `<svg class="hud-icon"><use href="#${RESOURCE_ICON[g.resource]}"/></svg> ${g.resource}`,
+      sell: g.sell,
+      buy: g.buy,
+    })),
+    (id, dir) => sim.enqueue({ type: 'trade', resource: id as Resource, dir }),
   );
 
   // Upgrade button inside the selection panel (event-delegated so it survives
@@ -523,6 +543,7 @@ async function start(): Promise<void> {
         `<span class="stat"${t('Wheat — grown on Wheat Farms, milled into flour.')}>${icon('i-wheat')} ${w.stockpile.wheat}</span>`,
         `<span class="stat"${t('Flour — milled from wheat at the Mill, baked into bread.')}>${icon('i-flour')} ${w.stockpile.flour}</span>`,
         `<span class="stat"${t('Food in the granary: bread / apples / meat / fish. Peasants eat every 20s; a varied diet boosts popularity.')}>${icon('i-bread')} ${w.granaryFood.bread} ${icon('i-apple')} ${w.granaryFood.apples} ${icon('i-meat')} ${w.granaryFood.meat} ${icon('i-fish')} ${w.granaryFood.fish}</span>`,
+        `<span class="stat"${t('Gold — earned by selling goods at the Market, spent buying goods you need.')}>🪙 ${w.gold}</span>`,
         `<span class="stat"${t('Population / housing capacity. Build Houses to raise the cap so more peasants can move in.')}>👥 ${pop}/${housing}</span>`,
         `<span class="stat"${t('Popularity — rises when peasants are fed (varied diet helps), falls when they starve. Hits 0 = you lose.')}>❤️ ${w.popularity} (food ${w.lastFoodDelta >= 0 ? '+' : ''}${w.lastFoodDelta})</span>`,
         raidStat,
@@ -530,9 +551,21 @@ async function start(): Promise<void> {
       ].join(''),
     );
 
+    let marketOpen = false;
     if (selection.kind === 'building') {
       const b = sim.world.buildings.get(selection.id);
-      if (b) {
+      if (b && b.type === 'market') {
+        marketOpen = true;
+        const counts: Record<string, number> = {};
+        const canBuy: Record<string, boolean> = {};
+        for (const g of MARKET_GOODS) {
+          counts[g.resource] = resourceCount(w, g.resource);
+          canBuy[g.resource] = w.gold >= g.buy;
+        }
+        hud.updateMarket(w.gold, counts, canBuy);
+        hud.setInfo('');
+        hud.setAction(null);
+      } else if (b) {
         hud.setInfo(buildingStatusHtml(b, true));
         const def = BUILDINGS[b.type];
         if (def.recipe && b.level < MAX_BUILDING_LEVEL) {
@@ -557,6 +590,7 @@ async function start(): Promise<void> {
       hud.setInfo('');
       hud.setAction(null);
     }
+    hud.showMarket(marketOpen);
 
     // Hover tooltip: status of the building under the cursor.
     const hoverB = hovered && mouse.allowed ? buildingAt(w, hovered.x, hovered.y) : null;

@@ -356,3 +356,96 @@ body.night #hud-info button {
     display: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Market trade panel — shown when a Market is selected.
+   --------------------------------------------------------------------------- */
+#hud-market {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: none;
+  width: 240px;
+  max-height: 56vh;
+  overflow-y: auto;
+  background: rgba(20, 14, 8, 0.92);
+  border: 1px solid #6b5436;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 13px;
+  pointer-events: auto;
+  transition: background-color 1s ease, color 1s ease, border-color 1s ease;
+}
+.m-title {
+  color: #ffe066;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.m-gold {
+  color: #f4d87a;
+}
+.m-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 5px 0;
+}
+.m-lbl {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-transform: capitalize;
+}
+.m-count {
+  min-width: 22px;
+  text-align: right;
+  color: #b8ad97;
+}
+#hud-market button {
+  background: #4a3a20;
+  color: #f0e6d2;
+  border: 1px solid #6b5436;
+  border-radius: 4px;
+  padding: 5px 7px;
+  font-size: 12px;
+  cursor: pointer;
+}
+#hud-market button:hover {
+  background: #5e4a28;
+}
+#hud-market button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* night theme for the market */
+body.night #hud-market {
+  background: rgba(11, 13, 22, 0.92);
+  color: #c6cdde;
+  border-color: #39425f;
+}
+body.night #hud-market .m-title {
+  color: #cdbd7a;
+}
+body.night #hud-market button {
+  background: #2a3350;
+  border-color: #39425f;
+  color: #e6ecf7;
+}
+
+/* mobile: full-width above the build strip, larger tap targets */
+@media (max-width: 860px), (pointer: coarse) {
+  #hud-market {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 70px);
+    max-height: 48vh;
+  }
+  #hud-market button {
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}

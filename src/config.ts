@@ -44,6 +44,30 @@ export type StockResource = 'wood' | 'wheat' | 'flour'; // stored in the stockpi
 export type FoodType = 'bread' | 'apples' | 'meat' | 'fish'; // stored in the granary
 export const FOOD_TYPES: FoodType[] = ['bread', 'apples', 'meat', 'fish'];
 
+// ---------------------------------------------------------------------------
+// Gold & the Market — sell surplus goods for gold, buy goods you're short on.
+// Gold is a pure currency (never hauled), held in world.gold. Buy > sell (a
+// market spread) so trading isn't free money.
+// ---------------------------------------------------------------------------
+
+export const STARTING_GOLD = 20;
+
+export interface TradeGood {
+  resource: Resource;
+  sell: number; // gold you get for selling 1
+  buy: number; // gold it costs to buy 1
+}
+
+export const MARKET_GOODS: TradeGood[] = [
+  { resource: 'wood', sell: 2, buy: 4 },
+  { resource: 'wheat', sell: 2, buy: 4 },
+  { resource: 'flour', sell: 3, buy: 6 },
+  { resource: 'apples', sell: 3, buy: 6 },
+  { resource: 'fish', sell: 4, buy: 8 },
+  { resource: 'bread', sell: 4, buy: 8 },
+  { resource: 'meat', sell: 5, buy: 10 },
+];
+
 export type BuildingType =
   | 'keep'
   | 'campfire'
@@ -57,6 +81,7 @@ export type BuildingType =
   | 'wheatFarm'
   | 'mill'
   | 'bakery'
+  | 'market'
   | 'wall'
   | 'tower';
 
@@ -149,6 +174,11 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
       output: { resource: 'bread', amount: 1, dest: 'granary' },
       workTicks: 100,
     },
+  },
+  // Trading post — no worker; selecting it opens a buy/sell panel (see the HUD).
+  market: {
+    type: 'market', label: 'Market', size: { w: 2, h: 2 }, costWood: 14, hp: 120,
+    buildable: true, color: 0xb98a4e, height: 24,
   },
   wall: {
     type: 'wall', label: 'Wall', size: { w: 1, h: 1 }, costWood: 1, hp: 150,

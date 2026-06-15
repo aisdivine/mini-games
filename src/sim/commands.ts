@@ -7,12 +7,15 @@ import {
   ARCHER_HP,
   BUILDINGS,
   DEMOLISH_REFUND,
+  MARKET_GOODS,
   MAX_BUILDING_LEVEL,
   RAID_AT_TICK,
   upgradeWoodCost,
   type BuildingType,
+  type Resource,
 } from '../config';
 import type { SimEvent } from './events';
+import { deposit, resourceCount } from './economy';
 import { canPlace } from './grid';
 import {
   placeBuildingRaw,
@@ -31,6 +34,7 @@ export type Command =
   | { type: 'recruitArcher' }
   | { type: 'startRaid' }
   | { type: 'setRaids'; on: boolean }
+  | { type: 'trade'; resource: Resource; dir: 'buy' | 'sell' }
   | { type: 'spawnPeasant' } // debug
   | { type: 'cheatWood'; amount: number }; // debug
 
@@ -154,6 +158,32 @@ export function applyCommand(world: World, cmd: Command, events: SimEvent[]): vo
         world.raid = { triggered: false, spawnedCount: 0 };
         world.nextRaidTick = world.tick + RAID_AT_TICK;
         events.push({ type: 'message', text: '☮ Raids OFF — peaceful sandbox' });
+      }
+      return;
+    }
+
+    case 'trade': {
+      const hasMarket = [...world.buildings.values()].some((b) => b.type === 'market');
+      if (!hasMarket) {
+        events.push({ type: 'rejected', reason: 'Build a Market to trade' });
+        return;
+      }
+      const good = MARKET_GOODS.find((g) => g.resource === cmd.resource);
+      if (!good) return;
+      if (cmd.dir === 'sell') {
+        if (resourceCount(world, cmd.resource) < 1) {
+          events.push({ type: 'rejected', reason: `No ${cmd.resource} to sell` });
+          return;
+        }
+        deposit(world, cmd.resource, -1);
+        world.gold += good.sell;
+      } else {
+        if (world.gold < good.buy) {
+          events.push({ type: 'rejected', reason: `Need ${good.buy} gold` });
+          return;
+        }
+        world.gold -= good.buy;
+        deposit(world, cmd.resource, 1);
       }
       return;
     }

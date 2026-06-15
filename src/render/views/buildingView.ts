@@ -101,6 +101,9 @@ function animateLayer(L: LayerView, b: Building, clock: number, night: number): 
     case 'stalks':
       c.skew.x = Math.sin(clock * 0.0026 + phase) * (active ? 0.13 : 0.07);
       break;
+    case 'awning':
+      c.skew.x = Math.sin(clock * 0.003 + phase) * 0.05; // gentle cloth flutter
+      break;
     case 'flame': {
       const s = 1 + Math.sin(clock * 0.02 + phase) * 0.12 + Math.sin(clock * 0.05) * 0.06;
       c.scale.set(1 + (s - 1) * 0.4, s);

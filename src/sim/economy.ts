@@ -48,6 +48,13 @@ export function deposit(world: World, resource: Resource, amount: number): void 
   }
 }
 
+/** Current on-hand count of a resource, wherever it's stored. */
+export function resourceCount(world: World, resource: Resource): number {
+  return (FOOD_TYPES as Resource[]).includes(resource)
+    ? world.granaryFood[resource as FoodType]
+    : world.stockpile[resource as StockResource];
+}
+
 export function findDepot(world: World, dest: 'stockpile' | 'granary'): Building | null {
   for (const b of world.buildings.values()) {
     if (b.type === dest) return b;

@@ -6,10 +6,23 @@ export interface BuildMenuItem {
   hint?: string;
 }
 
+export interface MarketRow {
+  id: string;
+  label: string; // HTML (icon + name)
+  sell: number;
+  buy: number;
+}
+
 export class Hud {
   private top = document.getElementById('hud-top')!;
   private controls = document.getElementById('hud-controls')!;
   private build = document.getElementById('hud-build')!;
+  private market = document.getElementById('hud-market')!;
+  private marketTitle = document.createElement('div');
+  private marketRows = new Map<
+    string,
+    { count: HTMLElement; sell: HTMLButtonElement; buy: HTMLButtonElement }
+  >();
   private debug = document.getElementById('hud-debug')!;
   private messages = document.getElementById('hud-messages')!;
   private info = document.getElementById('hud-info')!;
@@ -56,6 +69,54 @@ export class Hud {
       btn.addEventListener('click', () => onSelect(item.id));
       this.controls.appendChild(btn);
       this.buttons.set(item.id, btn);
+    }
+  }
+
+  /** Build the market trade panel once (persistent buttons survive per-frame
+   *  state updates, so real clicks aren't dropped). */
+  buildMarket(rows: MarketRow[], onTrade: (id: string, dir: 'buy' | 'sell') => void): void {
+    this.market.innerHTML = '';
+    this.marketRows.clear();
+    this.marketTitle.className = 'm-title';
+    this.market.appendChild(this.marketTitle);
+    for (const r of rows) {
+      const row = document.createElement('div');
+      row.className = 'm-row';
+      const lbl = document.createElement('span');
+      lbl.className = 'm-lbl';
+      lbl.innerHTML = r.label;
+      const count = document.createElement('span');
+      count.className = 'm-count';
+      const sell = document.createElement('button');
+      sell.textContent = `Sell +${r.sell}`;
+      sell.title = `Sell 1 for ${r.sell} gold`;
+      sell.addEventListener('click', () => onTrade(r.id, 'sell'));
+      const buy = document.createElement('button');
+      buy.textContent = `Buy −${r.buy}`;
+      buy.title = `Buy 1 for ${r.buy} gold`;
+      buy.addEventListener('click', () => onTrade(r.id, 'buy'));
+      row.append(lbl, count, sell, buy);
+      this.market.appendChild(row);
+      this.marketRows.set(r.id, { count, sell, buy });
+    }
+  }
+
+  showMarket(show: boolean): void {
+    this.market.style.display = show ? 'block' : 'none';
+  }
+
+  /** Per-frame: refresh gold, on-hand counts, and affordability (button state). */
+  updateMarket(
+    gold: number,
+    counts: Record<string, number>,
+    canBuy: Record<string, boolean>,
+  ): void {
+    this.marketTitle.innerHTML = `<span class="m-gold">🪙 ${gold}</span> Market`;
+    for (const [id, row] of this.marketRows) {
+      const n = counts[id] ?? 0;
+      if (row.count.textContent !== String(n)) row.count.textContent = String(n);
+      row.sell.disabled = n < 1;
+      row.buy.disabled = !canBuy[id];
     }
   }
 

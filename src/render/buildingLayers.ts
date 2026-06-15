@@ -17,9 +17,10 @@ import bakerySmoke from '../art/v2/pack/buildings/bakery_smoke.svg?raw';
 import woodSaw from '../art/v2/pack/buildings/wood_saw.svg?raw';
 import wheatStalks from '../art/v2/pack/buildings/wheat_stalks.svg?raw';
 import campfireFlame from '../art/v2/pack/buildings/campfire_flame.svg?raw';
+import marketAwning from '../art/v2/pack/decor/market_awning.svg?raw';
 import windowGlow from '../art/v2/pack/atmosphere/window_glow.svg?raw';
 
-export type LayerMotion = 'flag' | 'sails' | 'smoke' | 'saw' | 'stalks' | 'flame' | 'glow';
+export type LayerMotion = 'flag' | 'sails' | 'smoke' | 'saw' | 'stalks' | 'flame' | 'glow' | 'awning';
 
 interface LayerSpec {
   raw: string;
@@ -37,6 +38,7 @@ const SPECS: Partial<Record<BuildingType, LayerSpec[]>> = {
   bakery: [{ raw: bakerySmoke, motion: 'smoke', activeOnly: true }],
   woodcutter: [{ raw: woodSaw, motion: 'saw', activeOnly: true }],
   wheatFarm: [{ raw: wheatStalks, motion: 'stalks' }],
+  market: [{ raw: marketAwning, motion: 'awning' }],
   campfire: [{ raw: campfireFlame, motion: 'flame' }],
 };
 

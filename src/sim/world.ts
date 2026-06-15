@@ -11,6 +11,7 @@ import {
   POPULARITY_START,
   RAID_AT_TICK,
   RAIDS_ENABLED,
+  STARTING_GOLD,
   STARTING_PEASANTS,
   STARTING_WOOD,
   T_GRASS,
@@ -131,6 +132,7 @@ export interface World {
   fish: Map<number, Fish>;
   stockpile: Record<StockResource, number>;
   granaryFood: Record<FoodType, number>;
+  gold: number;
   reservations: Reservation[];
   workerWanted: number[]; // building ids waiting for a worker, FIFO
   popularity: number;
@@ -162,6 +164,7 @@ export function createWorld(seed: number): World {
     fish: new Map(),
     stockpile: { wood: STARTING_WOOD, wheat: 0, flour: 0 },
     granaryFood: { bread: 8, apples: 6, meat: 0, fish: 0 },
+    gold: STARTING_GOLD,
     reservations: [],
     workerWanted: [],
     popularity: POPULARITY_START,
