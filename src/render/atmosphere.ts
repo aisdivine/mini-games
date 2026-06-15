@@ -10,9 +10,10 @@ export type AtmoMode = 'day' | 'night' | 'cycle';
 
 const DAY_MS = 200_000; // full day-night loop for 'cycle' mode (~3.3 min)
 
-// The night wash: a soft desaturated deep-blue, kept gentle so the map stays
-// readable and it's comfortable for long sessions.
-const NIGHT = { color: 0x222d4d, alpha: 0.36 };
+// The night wash is intentionally very light — most of the "night" look comes
+// from darkening the sand/ground itself (see main.ts ground tint), which is
+// easier on the eyes and more attractive than a heavy veil over everything.
+const NIGHT = { color: 0x2a3358, alpha: 0.12 };
 
 interface Stop { at: number; color: number; alpha: number }
 const STOPS: Stop[] = [

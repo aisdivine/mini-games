@@ -40,6 +40,19 @@ import { Hud } from './ui/hud';
 const SAVE_KEY = 'stronghold.save.v1';
 const AUTOSAVE_MS = 30_000;
 
+// Night ground tint — multiplied onto the baked sand so it reads darker and
+// cooler at night (the primary night effect; the screen wash stays light).
+const NIGHT_GROUND_TINT = 0x5e6cb4;
+function lerpRgb(a: number, b: number, t: number): number {
+  const ar = (a >> 16) & 255, ag = (a >> 8) & 255, ab = a & 255;
+  const br = (b >> 16) & 255, bg = (b >> 8) & 255, bb = b & 255;
+  return (
+    (Math.round(ar + (br - ar) * t) << 16) |
+    (Math.round(ag + (bg - ag) * t) << 8) |
+    Math.round(ab + (bb - ab) * t)
+  );
+}
+
 type Mode =
   | { kind: 'select' }
   | { kind: 'place'; building: BuildingType }
@@ -75,7 +88,8 @@ async function start(): Promise<void> {
     loadBuildingLayers(),
     loadAmbientLife(),
   ]);
-  layers.ground.addChild(createGroundView(sim.world));
+  const groundView = createGroundView(sim.world);
+  layers.ground.addChild(groundView);
   const water = new WaterView(sim.world);
   layers.ground.addChild(water.g);
   const overlay = new OverlayView();
@@ -368,6 +382,8 @@ async function start(): Promise<void> {
     atmosphere.update(renderClock, app.screen.width, app.screen.height);
     // dim the HUD to a dark theme at night so bright panels don't strain the eyes
     document.body.classList.toggle('night', atmosphere.nightAmount() > 0.4);
+    // darken the sand/ground itself at night (the main night look, easy on eyes)
+    groundView.tint = lerpRgb(0xffffff, NIGHT_GROUND_TINT, atmosphere.nightAmount());
     sceneSync.update(sim.world, events, Math.min(acc / SIM_DT_MS, 1), ticker.deltaMS, atmosphere.nightAmount());
 
     hotkeys.update(camera);
