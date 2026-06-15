@@ -105,6 +105,7 @@ export function applyCommand(world: World, cmd: Command, events: SimEvent[]): vo
       }
       world.stockpile.wood -= cost;
       b.level++;
+      events.push({ type: 'upgraded', id: b.id });
       events.push({ type: 'message', text: `${BUILDINGS[b.type].label} upgraded to Lv ${b.level} — faster production!` });
       return;
     }

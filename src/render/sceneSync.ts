@@ -4,7 +4,7 @@
 // chop chips) off a render clock — never the sim.
 
 import { Container, Graphics, Sprite } from 'pixi.js';
-import { MAP_W, MAP_H, T_GRASS, T_ROCK, T_WATER } from '../config';
+import { BUILDINGS, MAP_W, MAP_H, T_GRASS, T_ROCK, T_WATER } from '../config';
 import type { SimEvent } from '../sim/events';
 import type { Fish, Tree, World } from '../sim/world';
 import type { ArtTextures } from './assets';
@@ -18,6 +18,8 @@ interface Effect {
   g: Graphics;
   ttl: number;
   max: number;
+  vy: number; // vertical drift per tick (negative = rises)
+  grow: number; // scale added per tick
 }
 
 interface TreeView {
@@ -63,7 +65,7 @@ export class SceneSync {
     this.syncFish(world);
     this.syncBuildings(world);
     this.syncUnits(world, alpha);
-    this.handleEvents(events);
+    this.handleEvents(world, events);
     this.tickEffects();
   }
 
@@ -291,11 +293,11 @@ export class SceneSync {
       g.poly([0, 0, 4, 2, 1, 4]).fill(0xc9a26a);
       g.position.set(p.x + 6, p.y - 18);
       this.effectLayer.addChild(g);
-      this.effects.push({ g, ttl: 14, max: 14 });
+      this.effects.push({ g, ttl: 14, max: 14, vy: 0.6, grow: 0 });
     }
   }
 
-  private handleEvents(events: SimEvent[]): void {
+  private handleEvents(world: World, events: SimEvent[]): void {
     for (const e of events) {
       if (e.type === 'arrow') {
         const from = tileToScreen(e.from.x, e.from.y);
@@ -305,9 +307,49 @@ export class SceneSync {
           .lineTo(to.x, to.y - 8)
           .stroke({ width: 2, color: 0xf5f0dc });
         this.effectLayer.addChild(g);
-        this.effects.push({ g, ttl: 10, max: 10 });
+        this.effects.push({ g, ttl: 10, max: 10, vy: 0.6, grow: 0 });
+      } else if (e.type === 'buildingPlaced') {
+        this.spawnDust(world, e.id);
+      } else if (e.type === 'upgraded') {
+        this.spawnSparkle(world, e.id);
       }
     }
+  }
+
+  /** A puff of dust at a freshly placed building's footprint center. */
+  private spawnDust(world: World, id: number): void {
+    const p = this.buildingCenter(world, id);
+    if (!p) return;
+    const g = new Graphics();
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + 0.4;
+      g.circle(Math.cos(a) * 10, Math.sin(a) * 5 + 4, 5).fill({ color: 0xd8c8a0, alpha: 0.7 });
+    }
+    g.position.set(p.x, p.y);
+    this.effectLayer.addChild(g);
+    this.effects.push({ g, ttl: 26, max: 26, vy: -0.5, grow: 0.025 });
+  }
+
+  /** A gold sparkle burst when a building levels up. */
+  private spawnSparkle(world: World, id: number): void {
+    const p = this.buildingCenter(world, id);
+    if (!p) return;
+    const g = new Graphics();
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      const r = 12;
+      g.star(Math.cos(a) * r, Math.sin(a) * r - 18, 4, 3).fill({ color: 0xf4d87a });
+    }
+    g.position.set(p.x, p.y);
+    this.effectLayer.addChild(g);
+    this.effects.push({ g, ttl: 34, max: 34, vy: -0.45, grow: 0.02 });
+  }
+
+  private buildingCenter(world: World, id: number): { x: number; y: number } | null {
+    const b = world.buildings.get(id);
+    if (!b) return null;
+    const { w, h } = BUILDINGS[b.type].size;
+    return tileToScreen(b.tile.x + w / 2, b.tile.y + h / 2);
   }
 
   private tickEffects(): void {
@@ -315,7 +357,8 @@ export class SceneSync {
       const fx = this.effects[i];
       fx.ttl--;
       fx.g.alpha = fx.ttl / fx.max;
-      fx.g.y += 0.6; // chips/arrows drift down slightly as they fade
+      fx.g.y += fx.vy;
+      if (fx.grow) fx.g.scale.set(fx.g.scale.x + fx.grow);
       if (fx.ttl <= 0) {
         fx.g.destroy();
         this.effects.splice(i, 1);

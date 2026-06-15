@@ -7,6 +7,7 @@ export type SimEvent =
   | { type: 'message'; text: string }
   | { type: 'buildingPlaced'; id: number }
   | { type: 'buildingRemoved'; id: number }
+  | { type: 'upgraded'; id: number }
   | { type: 'arrow'; from: Vec2; to: Vec2 }
   | { type: 'unitDied'; id: number; role: string }
   | { type: 'raidStarted' }
