@@ -380,11 +380,26 @@ async function start(): Promise<void> {
   let acc = 0;
   let renderClock = 0; // ms, render-only (water shimmer etc.)
   let autosaveTimer = 0;
+  // Track the canvas size so we can keep the view centered when the window
+  // resizes (PixiJS resizeTo:window already resizes the renderer itself).
+  let lastW = app.screen.width;
+  let lastH = app.screen.height;
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) acc = 0;
   });
 
   app.ticker.add((ticker) => {
+    // Window resized: PixiJS already resized the canvas; keep whatever world
+    // point was at screen-center still centered (so content doesn't drift off).
+    if (app.screen.width !== lastW || app.screen.height !== lastH) {
+      const s = layers.world.scale.x;
+      const wx = (lastW / 2 - layers.world.position.x) / s;
+      const wy = (lastH / 2 - layers.world.position.y) / s;
+      camera.centerOn(wx, wy, app.screen.width, app.screen.height);
+      lastW = app.screen.width;
+      lastH = app.screen.height;
+    }
+
     // Fixed-timestep sim with interpolated rendering.
     if (!paused && sim.world.outcome === 'playing') {
       acc = Math.min(acc + ticker.deltaMS * speed, MAX_ACCUM_MS * speed);
