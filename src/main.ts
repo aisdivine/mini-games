@@ -29,7 +29,9 @@ import iconsSvg from './art/v2/icons.svg?raw';
 import { Camera } from './render/camera';
 import { tileToScreen } from './render/iso';
 import { Atmosphere } from './render/atmosphere';
+import { AmbientLife, loadAmbientLife } from './render/ambientLife';
 import { SceneSync } from './render/sceneSync';
+import { Container } from 'pixi.js';
 import { createGroundView } from './render/views/groundView';
 import { WaterView } from './render/views/waterView';
 import { OverlayView } from './render/views/overlayView';
@@ -69,10 +71,11 @@ async function start(): Promise<void> {
   const sim = new Sim(Date.now() & 0x7fffffff, loadedWorld ?? undefined);
   if (loadedWorld) setTimeout(() => hud.showMessage('Game resumed from autosave'), 300);
 
-  const [art, unitTex, buildingLayers] = await Promise.all([
+  const [art, unitTex, buildingLayers, lifeTex] = await Promise.all([
     loadArtTextures(),
     loadUnitTextures(),
     loadBuildingLayers(),
+    loadAmbientLife(),
   ]);
   layers.ground.addChild(createGroundView(sim.world));
   const water = new WaterView(sim.world);
@@ -80,6 +83,13 @@ async function start(): Promise<void> {
   const overlay = new OverlayView();
   layers.overlay.addChild(overlay.container);
   const sceneSync = new SceneSync(layers.entities, layers.overlay, art, unitTex, buildingLayers);
+
+  // Ambient wildlife: a sky layer (above the world) for birds; the camel rides
+  // the depth-sorted entity layer.
+  const sky = new Container();
+  sky.sortableChildren = true;
+  layers.world.addChild(sky);
+  const ambient = new AmbientLife(sky, layers.entities, lifeTex);
 
   // Day/night tint lives on the stage (screen-space), above the panned world.
   const atmosphere = new Atmosphere();
@@ -332,6 +342,7 @@ async function start(): Promise<void> {
     handleEvents(events);
     renderClock += ticker.deltaMS;
     water.update(renderClock);
+    ambient.update(renderClock, ticker.deltaMS);
     atmosphere.update(renderClock, app.screen.width, app.screen.height);
     sceneSync.update(sim.world, events, Math.min(acc / SIM_DT_MS, 1), ticker.deltaMS, atmosphere.nightAmount());
 
