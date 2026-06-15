@@ -329,29 +329,10 @@ body.night #hud-info button {
     font-size: 19px;
   }
 
-  /* build menu becomes a full-width, horizontally scrollable strip */
+  /* narrow desktop windows: still wrap (handled by the base rule), but trim the
+     right reserve so more buttons fit per row before stacking */
   #hud-build {
-    left: env(safe-area-inset-left, 0px);
-    right: env(safe-area-inset-right, 0px);
-    transform: none;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
-    justify-content: flex-start;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding: 4px 8px;
-    gap: 8px;
-    pointer-events: auto; /* the strip itself handles touch-scrolling */
-  }
-  #hud-build::-webkit-scrollbar {
-    display: none;
-  }
-  #hud-build button {
-    flex: 0 0 auto;
-    min-height: 44px;
-    padding: 10px 14px;
-    font-size: 14px;
+    padding: 0 12px;
   }
 
   /* selection panel: full-width above the build strip; debug line hidden */
@@ -456,5 +437,34 @@ body.night #hud-market button {
     min-height: 40px;
     padding: 8px 12px;
     font-size: 13px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Touch devices ONLY (real phones/tablets): the build menu is a horizontally
+   scrollable strip to save vertical space. Narrow *desktop* windows keep the
+   wrapping base rule (stack into rows) so a mouse never has to scroll buttons.
+   --------------------------------------------------------------------------- */
+@media (pointer: coarse) {
+  #hud-build {
+    left: env(safe-area-inset-left, 0px);
+    right: env(safe-area-inset-right, 0px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 4px 8px;
+    pointer-events: auto; /* the strip itself handles touch-scrolling */
+  }
+  #hud-build::-webkit-scrollbar {
+    display: none;
+  }
+  #hud-build button {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 14px;
   }
 }
