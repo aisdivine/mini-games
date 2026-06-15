@@ -8,7 +8,7 @@ export default defineConfig({
   base: './',
   build: { outDir: 'dist/land-of-faaa-faaa-away' },
   // Bind to 0.0.0.0 so phones/tablets on the same Wi-Fi can reach the dev
-  // server at http://<your-mac-LAN-IP>:5173 (e.g. http://192.168.5.27:5173).
+  // server at http://<your-mac-LAN-IP>:5173 (Vite prints the Network URL on start).
   server: { host: true },
   test: {
     environment: 'node',
