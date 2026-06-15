@@ -8,6 +8,7 @@ export interface BuildMenuItem {
 
 export class Hud {
   private top = document.getElementById('hud-top')!;
+  private controls = document.getElementById('hud-controls')!;
   private build = document.getElementById('hud-build')!;
   private debug = document.getElementById('hud-debug')!;
   private messages = document.getElementById('hud-messages')!;
@@ -41,6 +42,19 @@ export class Hud {
       if (item.hint) btn.title = item.hint;
       btn.addEventListener('click', () => onSelect(item.id));
       this.build.appendChild(btn);
+      this.buttons.set(item.id, btn);
+    }
+  }
+
+  /** Always-visible control cluster (pause / speed) — registers into the same
+   *  button map so setButtonLabel works for these too. */
+  controlMenu(items: BuildMenuItem[], onSelect: (id: string) => void): void {
+    for (const item of items) {
+      const btn = document.createElement('button');
+      btn.textContent = item.label;
+      if (item.hint) btn.title = item.hint;
+      btn.addEventListener('click', () => onSelect(item.id));
+      this.controls.appendChild(btn);
       this.buttons.set(item.id, btn);
     }
   }

@@ -11,11 +11,13 @@ const DAY_MS = 200_000; // full day-night loop (~3.3 min)
 interface Stop { at: number; color: number; alpha: number }
 
 // phase 0 = noon; quarter points dusk/night/dawn; wraps back to noon.
+// Night is intentionally gentle — a soft, desaturated deep-blue rather than a
+// harsh dark overlay — so it's easy on the eyes and the map stays readable.
 const STOPS: Stop[] = [
   { at: 0.0, color: 0xffffff, alpha: 0.0 }, // noon
-  { at: 0.25, color: 0xe8842b, alpha: 0.26 }, // dusk
-  { at: 0.5, color: 0x16265e, alpha: 0.44 }, // night
-  { at: 0.75, color: 0xffd98a, alpha: 0.16 }, // dawn
+  { at: 0.25, color: 0xe8842b, alpha: 0.2 }, // dusk (warm)
+  { at: 0.5, color: 0x24304f, alpha: 0.34 }, // night (soft blue, capped for legibility)
+  { at: 0.75, color: 0xffd98a, alpha: 0.13 }, // dawn
   { at: 1.0, color: 0xffffff, alpha: 0.0 }, // noon (wrap)
 ];
 

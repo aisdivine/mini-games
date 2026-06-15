@@ -170,6 +170,21 @@ async function start(): Promise<void> {
     },
   );
 
+  // Always-visible play controls (essential on touch, where there's no keyboard).
+  hud.controlMenu(
+    [
+      { id: 'pause', label: '⏸', hint: 'Pause / resume (Space)' },
+      { id: 'speed', label: '1×', hint: 'Cycle game speed (1/2/3)' },
+    ],
+    (id) => {
+      if (id === 'pause') {
+        paused = !paused;
+      } else if (id === 'speed') {
+        speed = speed === 1 ? 2 : speed === 2 ? 4 : 1;
+      }
+    },
+  );
+
   // Upgrade button inside the selection panel (event-delegated so it survives
   // the panel's per-frame re-render).
   hud.onInfoAction(() => {
@@ -345,6 +360,8 @@ async function start(): Promise<void> {
     water.update(renderClock);
     ambient.update(renderClock, ticker.deltaMS);
     atmosphere.update(renderClock, app.screen.width, app.screen.height);
+    // dim the HUD to a dark theme at night so bright panels don't strain the eyes
+    document.body.classList.toggle('night', atmosphere.nightAmount() > 0.4);
     sceneSync.update(sim.world, events, Math.min(acc / SIM_DT_MS, 1), ticker.deltaMS, atmosphere.nightAmount());
 
     hotkeys.update(camera);
@@ -473,6 +490,9 @@ async function start(): Promise<void> {
       w.raidsEnabled ? '⚔ Raids: On' : '⚔ Raids: Off',
       w.raidsEnabled ? 'Enemy raids enabled — click to return to peace' : 'No raids — click to enable enemy attacks',
     );
+    // play-control labels
+    hud.setButtonLabel('pause', paused ? '▶' : '⏸', paused ? 'Resume (Space)' : 'Pause (Space)');
+    hud.setButtonLabel('speed', `${speed}×`, 'Cycle game speed (1/2/3)');
     const icon = (id: string): string => `<svg class="hud-icon"><use href="#${id}"/></svg>`;
     const t = (s: string): string => ` title="${s}"`;
     hud.setTopBar(

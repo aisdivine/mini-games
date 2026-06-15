@@ -2,7 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Lock zoom + cover notches so the game owns the whole screen on phones -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#140e08" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>The Land of Faaa Faaa Away</title>
     <link rel="stylesheet" href="/src/ui/hud.css" />
   </head>
@@ -10,6 +18,7 @@
     <div id="game"></div>
     <div id="hud">
       <div id="hud-top"></div>
+      <div id="hud-controls"></div>
       <div id="hud-build"></div>
       <div id="hud-messages"></div>
       <div id="hud-info"></div>
