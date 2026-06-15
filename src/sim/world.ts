@@ -162,7 +162,7 @@ export function createWorld(seed: number): World {
     units: new Map(),
     trees: new Map(),
     fish: new Map(),
-    stockpile: { wood: STARTING_WOOD, wheat: 0, flour: 0 },
+    stockpile: { wood: STARTING_WOOD, wheat: 0, flour: 0, stone: 0 },
     granaryFood: { bread: 8, apples: 6, meat: 0, fish: 0 },
     gold: STARTING_GOLD,
     reservations: [],
@@ -289,6 +289,28 @@ export function shoreTileNear(world: World, water: Vec2): Vec2 | null {
     if (isPassable(world, tx, ty)) return { x: tx, y: ty };
   }
   return null;
+}
+
+/** Nearest passable tile beside a rock (mountain) tile — where a quarry worker
+ *  stands to mine stone. The mountain is an inexhaustible stone source. */
+export function findNearestRockShore(world: World, from: Vec2): Vec2 | null {
+  let best: Vec2 | null = null;
+  let bestDist = Infinity;
+  const fx = Math.floor(from.x);
+  const fy = Math.floor(from.y);
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      if (world.terrain[idx(x, y)] !== T_ROCK) continue;
+      const d = Math.abs(x - fx) + Math.abs(y - fy);
+      if (d >= bestDist) continue;
+      const shore = shoreTileNear(world, { x, y });
+      if (shore) {
+        bestDist = d;
+        best = shore;
+      }
+    }
+  }
+  return best;
 }
 
 /** Nearest restockable shoal with a reachable shore. Tiebreak by id. */

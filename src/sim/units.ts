@@ -16,6 +16,7 @@ import { findPath } from './pathfinding';
 import { nextRand, nextInt } from './rng';
 import {
   findNearestFish,
+  findNearestRockShore,
   findNearestTree,
   resetToIdle,
   shoreTileNear,
@@ -328,6 +329,19 @@ function dispatchFetchOrWork(world: World, unit: Unit, workplace: Building): voi
     unit.targetId = shoal.id;
     workplace.state = { kind: 'producing', ticksLeft: workTicksAtLevel(recipe.workTicks, workplace.level) };
     unit.task = { kind: 'goTo', dest: shore, then: { kind: 'workHere' } };
+    return;
+  }
+
+  // Quarry: walk to the mountain's edge and mine stone (inexhaustible).
+  if (workplace.type === 'quarry') {
+    const spot = findNearestRockShore(world, unit.pos);
+    if (!spot) {
+      workplace.state = { kind: 'awaitingInput' }; // no reachable rock; retry
+      unit.task = { kind: 'waitRetry', what: 'input', cooldown: WAIT_RETRY_TICKS };
+      return;
+    }
+    workplace.state = { kind: 'producing', ticksLeft: workTicksAtLevel(recipe.workTicks, workplace.level) };
+    unit.task = { kind: 'goTo', dest: spot, then: { kind: 'workHere' } };
     return;
   }
 

@@ -13,6 +13,7 @@ export const RESOURCE_COLORS: Record<Resource, number> = {
   wood: 0x8b5a2b,
   wheat: 0xd9c34a,
   flour: 0xf0f0f0,
+  stone: 0x9a958c,
   bread: 0xc97b4a,
   apples: 0xd0432f,
   meat: 0x9c4a3a,

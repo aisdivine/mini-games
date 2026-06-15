@@ -7,6 +7,10 @@
 <line x1="12" y1="22" x2="12" y2="9" stroke="#A87E22" stroke-width="1.4"/><line x1="12" y1="14" x2="7" y2="9" stroke="#A87E22" stroke-width="1.2"/><line x1="12" y1="14" x2="17" y2="9" stroke="#A87E22" stroke-width="1.2"/>
 <ellipse cx="12" cy="6" rx="2.4" ry="4" fill="#E8C45A"/><ellipse cx="7" cy="7" rx="2" ry="3.4" fill="#F0CE66"/><ellipse cx="17" cy="7" rx="2" ry="3.4" fill="#F0CE66"/>
 </symbol>
+<symbol id="i-stone" viewBox="0 0 24 24">
+<polygon points="4,14 11,9 17,13 9,19" fill="#B6B0A0"/><polygon points="4,14 9,19 9,21 4,16" fill="#928D80"/><polygon points="11,9 17,13 17,15 9,21 9,19" fill="#7E7A6E"/>
+<polygon points="12,7 18,4 22,7 15,11" fill="#C2BCAC"/><polygon points="12,7 15,11 15,13 12,11" fill="#9A9588"/><polygon points="18,4 22,7 22,9 15,13 15,11" fill="#857F72"/>
+</symbol>
 <symbol id="i-flour" viewBox="0 0 24 24">
 <path d="M6 21 Q5 9 8 8 Q12 6.5 16 8 Q19 9 18 21 Z" fill="#EDE6D4"/><path d="M12 7.5 L12 21" stroke="#D8CFB8" stroke-width="1"/>
 <path d="M8 8 Q12 5 16 8 Q12 9.5 8 8 Z" fill="#D8CFB8"/>

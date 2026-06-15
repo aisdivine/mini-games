@@ -39,8 +39,8 @@ export const DEMOLISH_REFUND = 0.5;
 // Resources & buildings
 // ---------------------------------------------------------------------------
 
-export type Resource = 'wood' | 'wheat' | 'flour' | 'bread' | 'apples' | 'meat' | 'fish';
-export type StockResource = 'wood' | 'wheat' | 'flour'; // stored in the stockpile
+export type Resource = 'wood' | 'wheat' | 'flour' | 'stone' | 'bread' | 'apples' | 'meat' | 'fish';
+export type StockResource = 'wood' | 'wheat' | 'flour' | 'stone'; // stored in the stockpile
 export type FoodType = 'bread' | 'apples' | 'meat' | 'fish'; // stored in the granary
 export const FOOD_TYPES: FoodType[] = ['bread', 'apples', 'meat', 'fish'];
 
@@ -65,6 +65,7 @@ export const MARKET_GOODS: TradeGood[] = [
   { resource: 'apples', sell: 3, buy: 6 },
   { resource: 'fish', sell: 4, buy: 8 },
   { resource: 'bread', sell: 4, buy: 8 },
+  { resource: 'stone', sell: 4, buy: 8 },
   { resource: 'meat', sell: 5, buy: 10 },
 ];
 
@@ -81,6 +82,7 @@ export type BuildingType =
   | 'wheatFarm'
   | 'mill'
   | 'bakery'
+  | 'quarry'
   | 'market'
   | 'wall'
   | 'tower';
@@ -174,6 +176,13 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
       output: { resource: 'bread', amount: 1, dest: 'granary' },
       workTicks: 100,
     },
+  },
+  // Quarry — its worker walks to the mountain (rock terrain) and mines stone,
+  // hauling it back to the stockpile. Build it near the highlands.
+  quarry: {
+    type: 'quarry', label: 'Quarry', size: { w: 2, h: 2 }, costWood: 12, hp: 120,
+    buildable: true, color: 0x8d887f, height: 20,
+    recipe: { output: { resource: 'stone', amount: 1, dest: 'stockpile' }, workTicks: 130 },
   },
   // Trading post — no worker; selecting it opens a buy/sell panel (see the HUD).
   market: {

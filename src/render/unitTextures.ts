@@ -21,6 +21,7 @@ const JOB_TUNIC: Partial<Record<BuildingType, number>> = {
   appleOrchard: 0x3f9a3f,
   hunter: 0x5f6b2e,
   fishery: 0x2f7d99,
+  quarry: 0x7d7a72,
   wheatFarm: 0xcf9a1e,
   mill: 0x9a93a8,
   bakery: 0xd8763a,

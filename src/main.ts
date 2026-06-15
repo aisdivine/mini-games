@@ -68,12 +68,12 @@ type Selection =
   | { kind: 'building'; id: number };
 
 const BUILD_ORDER: BuildingType[] = [
-  'house', 'granary', 'appleOrchard', 'hunter', 'fishery', 'woodcutter', 'wheatFarm', 'mill', 'bakery', 'market', 'tower',
+  'house', 'granary', 'appleOrchard', 'hunter', 'fishery', 'woodcutter', 'quarry', 'wheatFarm', 'mill', 'bakery', 'market', 'tower',
 ];
 
 // HUD resource icon id for a tradeable resource.
 const RESOURCE_ICON: Record<Resource, string> = {
-  wood: 'i-wood', wheat: 'i-wheat', flour: 'i-flour',
+  wood: 'i-wood', wheat: 'i-wheat', flour: 'i-flour', stone: 'i-stone',
   bread: 'i-bread', apples: 'i-apple', meat: 'i-meat', fish: 'i-fish',
 };
 
@@ -474,6 +474,7 @@ async function start(): Promise<void> {
       case 'awaitingInput':
         if (b.type === 'woodcutter') return '🔍 Looking for trees';
         if (b.type === 'fishery') return '🎣 Looking for fish';
+        if (b.type === 'quarry') return '⛏ Looking for stone';
         return `⏳ Waiting for ${def.recipe?.input?.resource ?? 'input'}`;
       case 'producing': {
         const full = workTicksAtLevel(def.recipe!.workTicks, b.level);
@@ -542,6 +543,7 @@ async function start(): Promise<void> {
         `<span class="stat"${t('Wood — your main building material. Woodcutters chop it from trees.')}>${icon('i-wood')} ${w.stockpile.wood}</span>`,
         `<span class="stat"${t('Wheat — grown on Wheat Farms, milled into flour.')}>${icon('i-wheat')} ${w.stockpile.wheat}</span>`,
         `<span class="stat"${t('Flour — milled from wheat at the Mill, baked into bread.')}>${icon('i-flour')} ${w.stockpile.flour}</span>`,
+        `<span class="stat"${t('Stone — mined at the mountain by a Quarry. A tradeable building material.')}>${icon('i-stone')} ${w.stockpile.stone}</span>`,
         `<span class="stat"${t('Food in the granary: bread / apples / meat / fish. Peasants eat every 20s; a varied diet boosts popularity.')}>${icon('i-bread')} ${w.granaryFood.bread} ${icon('i-apple')} ${w.granaryFood.apples} ${icon('i-meat')} ${w.granaryFood.meat} ${icon('i-fish')} ${w.granaryFood.fish}</span>`,
         `<span class="stat"${t('Gold — earned by selling goods at the Market, spent buying goods you need.')}>🪙 ${w.gold}</span>`,
         `<span class="stat"${t('Population / housing capacity. Build Houses to raise the cap so more peasants can move in.')}>👥 ${pop}/${housing}</span>`,
