@@ -81,6 +81,6 @@ describe('building upgrades', () => {
       run(sim, 3000);
       return sim.world.stockpile.wood - before;
     };
-    expect(make(3)).toBeGreaterThan(make(1));
+    expect(make(MAX_BUILDING_LEVEL)).toBeGreaterThan(make(1));
   });
 });

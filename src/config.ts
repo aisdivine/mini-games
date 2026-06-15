@@ -165,8 +165,10 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
 // its craft time. Level 1..MAX; the factor is applied to the recipe workTicks.
 // ---------------------------------------------------------------------------
 
-export const MAX_BUILDING_LEVEL = 3;
-export const UPGRADE_SPEED_FACTOR = [1, 0.65, 0.42]; // craft-time multiplier by level
+export const MAX_BUILDING_LEVEL = 9;
+// Craft-time multiplier by level (index = level-1). Smooth diminishing returns
+// from full time at Lv 1 down to ~0.2× at Lv 9.
+export const UPGRADE_SPEED_FACTOR = [1, 0.85, 0.72, 0.61, 0.52, 0.44, 0.37, 0.31, 0.26];
 
 export function workTicksAtLevel(baseTicks: number, level: number): number {
   return Math.max(1, Math.round(baseTicks * UPGRADE_SPEED_FACTOR[level - 1]));
