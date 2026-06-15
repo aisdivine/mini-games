@@ -212,7 +212,7 @@ async function start(): Promise<void> {
   // Always-visible play controls (essential on touch, where there's no keyboard).
   hud.controlMenu(
     [
-      { id: 'pause', label: '⏸', hint: 'Pause / resume (Space)' },
+      { id: 'pause', label: '⏸', hint: 'Pause / resume (Esc)' },
       { id: 'speed', label: '1×', hint: 'Cycle game speed (1/2/3)' },
     ],
     (id) => {
@@ -333,14 +333,15 @@ async function start(): Promise<void> {
   });
 
   // --- Hotkeys ---------------------------------------------------------------
-  hotkeys.bind('Escape', () => {
+  // Space cancels the current mode / clears selection; Escape pauses.
+  hotkeys.bind(' ', () => {
     setMode({ kind: 'select' });
     selection = { kind: 'none' };
   });
   hotkeys.bind('1', () => (speed = 1));
   hotkeys.bind('2', () => (speed = 2));
   hotkeys.bind('3', () => (speed = 4));
-  hotkeys.bind(' ', () => (paused = !paused));
+  hotkeys.bind('Escape', () => (paused = !paused));
   hotkeys.bind('s', saveGame);
   hotkeys.bind('S', saveGame);
   hotkeys.bind('Home', resetView);
@@ -560,7 +561,7 @@ async function start(): Promise<void> {
       w.raidsEnabled ? 'Enemy raids enabled — click to return to peace' : 'No raids — click to enable enemy attacks',
     );
     // play-control labels
-    hud.setButtonLabel('pause', paused ? '▶' : '⏸', paused ? 'Resume (Space)' : 'Pause (Space)');
+    hud.setButtonLabel('pause', paused ? '▶' : '⏸', paused ? 'Resume (Esc)' : 'Pause (Esc)');
     hud.setButtonLabel('speed', `${speed}×`, 'Cycle game speed (1/2/3)');
     const icon = (id: string): string => `<svg class="hud-icon"><use href="#${id}"/></svg>`;
     const t = (s: string): string => ` title="${s}"`;
@@ -630,7 +631,7 @@ async function start(): Promise<void> {
 
     hud.setDebug(
       `${hovered ? `tile (${hovered.x}, ${hovered.y})` : 'tile —'}  tick ${w.tick}\n` +
-        `keys: 1/2/3 speed · space pause · c center · g paths · w +wood · p +peasant · esc cancel`,
+        `keys: 1/2/3 speed · esc pause · c center · g paths · w +wood · p +peasant · space cancel`,
     );
   }
 }

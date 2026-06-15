@@ -50,10 +50,10 @@ Peaceful economy sandbox — raids are paused (`RAIDS_ENABLED = false`).
 | Left-drag / arrows | Pan camera |
 | Scroll wheel | Zoom to cursor |
 | Build menu + click | Place building (drag for walls) |
-| Right-click / Esc | Cancel mode, clear selection |
+| Right-click / Space | Cancel mode, clear selection |
 | Click unit/building | Select (archers: click ground to move) |
 | `1` `2` `3` | Speed 1× / 2× / 4× |
-| Space | Pause |
+| Esc | Pause |
 | `g` | Debug: show unit paths |
 | `w` `p` `r` | Cheats: +100 wood, spawn peasant, start raid |
 
