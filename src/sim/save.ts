@@ -2,6 +2,7 @@
 // conversion. Game state never lives on display objects — the renderer is
 // disposable, which is what keeps this file small.
 
+import { RAID_AT_TICK, RAIDS_ENABLED, STARTING_GOLD } from '../config';
 import type { Building, Fish, Tree, Unit, World } from './world';
 
 // Bumped to 5: the world now carries a terrain layer + fish shoals, and the
@@ -49,6 +50,13 @@ export function deserializeWorld(json: string): World | null {
       units: new Map(w.units),
       trees: new Map(w.trees),
       fish: new Map(w.fish),
+      // Backfill fields added after v5 shipped, so older same-version autosaves
+      // don't load with `undefined` resources/flags.
+      gold: w.gold ?? STARTING_GOLD,
+      raidsEnabled: w.raidsEnabled ?? RAIDS_ENABLED,
+      nextRaidTick: w.nextRaidTick ?? RAID_AT_TICK,
+      stockpile: { wood: 0, wheat: 0, flour: 0, stone: 0, ...(w.stockpile as Partial<World['stockpile']>) },
+      granaryFood: { bread: 0, apples: 0, meat: 0, fish: 0, ...(w.granaryFood as Partial<World['granaryFood']>) },
     };
   } catch {
     return null;

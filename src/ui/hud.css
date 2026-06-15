@@ -84,11 +84,18 @@ body {
 #hud-build {
   position: absolute;
   bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
   display: flex;
+  flex-wrap: wrap; /* wrap onto multiple rows so nothing is cut off / scrolled */
+  justify-content: center;
+  align-content: flex-end;
   gap: 8px;
-  pointer-events: auto;
+  /* keep clear of the selection / market panel in the bottom-right */
+  padding: 0 256px 0 12px;
+  /* container ignores clicks so empty space falls through to the map; the
+     buttons re-enable pointer events themselves */
+  pointer-events: none;
 }
 
 #hud-build button {
@@ -99,6 +106,7 @@ body {
   padding: 8px 12px;
   font-size: 13px;
   cursor: pointer;
+  pointer-events: auto;
 }
 
 #hud-build button:hover {
@@ -334,6 +342,7 @@ body.night #hud-info button {
     scrollbar-width: none;
     padding: 4px 8px;
     gap: 8px;
+    pointer-events: auto; /* the strip itself handles touch-scrolling */
   }
   #hud-build::-webkit-scrollbar {
     display: none;
