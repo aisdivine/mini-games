@@ -113,14 +113,24 @@ async function start(): Promise<void> {
   const ambient = new AmbientLife(sky, layers.entities, lifeTex);
 
   // Screen-space lighting overlay lives on the stage, above the panned world.
-  // Phones default to NIGHT mode (dark + easy on the eyes); desktops to DAY.
+  // On a phone, night mode kicks in only when it's actually night (local clock);
+  // otherwise — and always on desktop — it's daytime. 'n' overrides for the run.
   const atmosphere = new Atmosphere();
   app.stage.addChild(atmosphere.g);
   const isMobile =
     window.matchMedia?.('(pointer: coarse)').matches ||
     /Android|iPhone|iPad|iPod|Mobile|Silk/i.test(navigator.userAgent) ||
     window.innerWidth <= 860;
-  atmosphere.setMode(isMobile ? 'night' : 'day');
+  const isNightTime = (): boolean => {
+    const h = new Date().getHours();
+    return h >= 19 || h < 7; // 7pm–7am counts as night
+  };
+  let manualLight = false; // set once the player presses 'n'
+  const applyAutoMode = (): void => {
+    if (!manualLight) atmosphere.setMode(isMobile && isNightTime() ? 'night' : 'day');
+  };
+  applyAutoMode();
+  setInterval(applyAutoMode, 60_000); // follow the day↔night boundary while playing
 
   // Restore default zoom and re-center the camera on the keep.
   function resetView(): void {
@@ -337,6 +347,7 @@ async function start(): Promise<void> {
   hotkeys.bind('c', resetView); // 'c' = center, easier to reach than Home
   hotkeys.bind('g', () => (overlay.debugPaths = !overlay.debugPaths));
   hotkeys.bind('n', () => {
+    manualLight = true; // stop auto day/night for the rest of this session
     atmosphere.toggle();
     hud.showMessage(atmosphere.mode === 'night' ? '🌙 Night mode' : '☀️ Day mode');
   });
