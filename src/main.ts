@@ -30,6 +30,7 @@ import { Camera } from './render/camera';
 import { tileToScreen } from './render/iso';
 import { SceneSync } from './render/sceneSync';
 import { createGroundView } from './render/views/groundView';
+import { WaterView } from './render/views/waterView';
 import { OverlayView } from './render/views/overlayView';
 import { setupPointer } from './input/pointer';
 import { Hotkeys } from './input/hotkeys';
@@ -73,6 +74,8 @@ async function start(): Promise<void> {
     loadBuildingLayers(),
   ]);
   layers.ground.addChild(createGroundView(sim.world));
+  const water = new WaterView(sim.world);
+  layers.ground.addChild(water.g);
   const overlay = new OverlayView();
   layers.overlay.addChild(overlay.container);
   const sceneSync = new SceneSync(layers.entities, layers.overlay, art, unitTex, buildingLayers);
@@ -300,6 +303,7 @@ async function start(): Promise<void> {
 
   // --- Game loop ---------------------------------------------------------------
   let acc = 0;
+  let renderClock = 0; // ms, render-only (water shimmer etc.)
   let autosaveTimer = 0;
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) acc = 0;
@@ -317,6 +321,8 @@ async function start(): Promise<void> {
 
     const events = sim.drainEvents();
     handleEvents(events);
+    renderClock += ticker.deltaMS;
+    water.update(renderClock);
     sceneSync.update(sim.world, events, Math.min(acc / SIM_DT_MS, 1), ticker.deltaMS);
 
     hotkeys.update(camera);

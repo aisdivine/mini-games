@@ -4,7 +4,7 @@
 // chop chips) off a render clock — never the sim.
 
 import { Container, Graphics, Sprite } from 'pixi.js';
-import { MAP_W, MAP_H, T_ROCK } from '../config';
+import { MAP_W, MAP_H, T_GRASS, T_ROCK, T_WATER } from '../config';
 import type { SimEvent } from '../sim/events';
 import type { Fish, Tree, World } from '../sim/world';
 import type { ArtTextures } from './assets';
@@ -37,6 +37,7 @@ export class SceneSync {
   private unitViews = new Map<number, UnitView>();
   private treeViews = new Map<number, TreeView>();
   private fishViews = new Map<number, FishView>();
+  private reedViews: { c: Container; phase: number }[] = [];
   private sceneryBuilt = false;
   private effects: Effect[] = [];
   private clock = 0; // ms, render-only
@@ -55,12 +56,19 @@ export class SceneSync {
     this.clock += dtMs;
 
     if (!this.sceneryBuilt) this.buildScenery(world);
+    this.animateReeds();
     this.syncTrees(world);
     this.syncFish(world);
     this.syncBuildings(world);
     this.syncUnits(world, alpha);
     this.handleEvents(events);
     this.tickEffects();
+  }
+
+  private animateReeds(): void {
+    for (const r of this.reedViews) {
+      r.c.skew.x = Math.sin(this.clock * 0.0024 + r.phase) * 0.12;
+    }
   }
 
   /** Static terrain decor (mountain peaks), placed once from the terrain layer.
@@ -100,6 +108,35 @@ export class SceneSync {
       container.position.set(p.x, p.y);
       container.zIndex = r.x + r.y;
       this.entityLayer.addChild(container);
+    }
+
+    this.buildReeds(world);
+  }
+
+  /** Reed clumps on the shore — grass tiles touching water. Deterministic
+   *  subset so the pond/stream edges read as a living wetland. */
+  private buildReeds(world: World): void {
+    const entry = this.art.get('reeds');
+    if (!entry) return;
+    for (let y = 1; y < MAP_H - 1; y++) {
+      for (let x = 1; x < MAP_W - 1; x++) {
+        const i = y * MAP_W + x;
+        if (world.terrain[i] !== T_GRASS || world.occupancy[i] !== 0) continue;
+        const touchesWater =
+          world.terrain[i - 1] === T_WATER || world.terrain[i + 1] === T_WATER ||
+          world.terrain[i - MAP_W] === T_WATER || world.terrain[i + MAP_W] === T_WATER;
+        if (!touchesWater) continue;
+        if (((x * 31 + y * 17) >>> 0) % 3 !== 0) continue; // ~1/3 of shore tiles
+        const sprite = new Sprite(entry.texture);
+        sprite.position.set(-entry.anchor.x, -entry.anchor.y);
+        const c = new Container();
+        c.addChild(sprite);
+        const p = tileToScreen(x + 0.5, y + 0.5);
+        c.position.set(p.x, p.y);
+        c.zIndex = x + y + 0.3;
+        this.entityLayer.addChild(c);
+        this.reedViews.push({ c, phase: (x * 1.7 + y) % (Math.PI * 2) });
+      }
     }
   }
 

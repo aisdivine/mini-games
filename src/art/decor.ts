@@ -4,6 +4,7 @@
 
 import treeSvg from './v2/tree.svg?raw';
 import stumpSvg from './v2/stump.svg?raw';
+import reedsSvg from './v2/pack/decor/oasis_reeds.svg?raw';
 import { poly, shade, svgDoc } from './flat';
 import type { DecorId, Pt, VectorAsset } from './types';
 
@@ -63,6 +64,7 @@ export function buildDecorAssets(): Record<DecorId, VectorAsset> {
   return {
     tree: fromSvg('tree', treeSvg),
     stump: fromSvg('stump', stumpSvg),
+    reeds: fromSvg('reeds', reedsSvg),
     mountain: buildMountain(),
     fish: buildFish(),
   };
