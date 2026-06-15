@@ -89,9 +89,15 @@ async function start(): Promise<void> {
   layers.world.addChild(sky);
   const ambient = new AmbientLife(sky, layers.entities, lifeTex);
 
-  // Day/night tint lives on the stage (screen-space), above the panned world.
+  // Screen-space lighting overlay lives on the stage, above the panned world.
+  // Phones default to NIGHT mode (dark + easy on the eyes); desktops to DAY.
   const atmosphere = new Atmosphere();
   app.stage.addChild(atmosphere.g);
+  const isMobile =
+    window.matchMedia?.('(pointer: coarse)').matches ||
+    /Android|iPhone|iPad|iPod|Mobile|Silk/i.test(navigator.userAgent) ||
+    window.innerWidth <= 860;
+  atmosphere.setMode(isMobile ? 'night' : 'day');
 
   // Restore default zoom and re-center the camera on the keep.
   function resetView(): void {
@@ -298,7 +304,7 @@ async function start(): Promise<void> {
   hotkeys.bind('g', () => (overlay.debugPaths = !overlay.debugPaths));
   hotkeys.bind('n', () => {
     atmosphere.toggle();
-    hud.showMessage(atmosphere.enabled ? '🌙 Day/night on' : '☀️ Day/night off');
+    hud.showMessage(atmosphere.mode === 'night' ? '🌙 Night mode' : '☀️ Day mode');
   });
   hotkeys.bind('w', () => sim.enqueue({ type: 'cheatWood', amount: 100 }));
   hotkeys.bind('p', () => sim.enqueue({ type: 'spawnPeasant' }));

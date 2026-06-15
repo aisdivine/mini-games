@@ -1,22 +1,24 @@
-// Day/night cycle: a single full-screen color overlay that lerps through
-// noon → dusk → night → dawn over a slow loop (the v2 pack's daynight stops).
-// Screen-space (added to the stage, not the panned world). Also exposes a
-// 0..1 "night" amount so house windows can glow after dark. Near-zero cost,
-// big mood payoff — toggle with 'n'.
+// Screen-space lighting mode. Default is device-based: phones run in NIGHT mode
+// (a soft, easy-on-the-eyes dark wash over the whole screen + a dimmed HUD),
+// desktops run in DAY mode (no tint). A 'cycle' mode (slow day↔night loop) is
+// also available and can be toggled with 'n'. Added to the stage, not the
+// panned world, so it covers everything.
 
 import { Graphics } from 'pixi.js';
 
-const DAY_MS = 200_000; // full day-night loop (~3.3 min)
+export type AtmoMode = 'day' | 'night' | 'cycle';
+
+const DAY_MS = 200_000; // full day-night loop for 'cycle' mode (~3.3 min)
+
+// The night wash: a soft desaturated deep-blue, kept gentle so the map stays
+// readable and it's comfortable for long sessions.
+const NIGHT = { color: 0x222d4d, alpha: 0.36 };
 
 interface Stop { at: number; color: number; alpha: number }
-
-// phase 0 = noon; quarter points dusk/night/dawn; wraps back to noon.
-// Night is intentionally gentle — a soft, desaturated deep-blue rather than a
-// harsh dark overlay — so it's easy on the eyes and the map stays readable.
 const STOPS: Stop[] = [
   { at: 0.0, color: 0xffffff, alpha: 0.0 }, // noon
-  { at: 0.25, color: 0xe8842b, alpha: 0.2 }, // dusk (warm)
-  { at: 0.5, color: 0x24304f, alpha: 0.34 }, // night (soft blue, capped for legibility)
+  { at: 0.25, color: 0xe8842b, alpha: 0.2 }, // dusk
+  { at: 0.5, color: NIGHT.color, alpha: NIGHT.alpha }, // night
   { at: 0.75, color: 0xffd98a, alpha: 0.13 }, // dawn
   { at: 1.0, color: 0xffffff, alpha: 0.0 }, // noon (wrap)
 ];
@@ -36,39 +38,50 @@ function lerpColor(a: number, b: number, t: number): number {
 
 export class Atmosphere {
   readonly g = new Graphics();
-  enabled = true;
-  private night = 0;
+  mode: AtmoMode = 'day';
+  private night = 0; // 0 (day) .. 1 (deep night) — drives the dark HUD + window glow
 
   update(clock: number, w: number, h: number): void {
-    if (!this.enabled) {
-      this.g.visible = false;
+    let color: number;
+    let alpha: number;
+
+    if (this.mode === 'day') {
       this.night = 0;
+      this.g.visible = false;
       return;
+    } else if (this.mode === 'night') {
+      color = NIGHT.color;
+      alpha = NIGHT.alpha;
+      this.night = 1;
+    } else {
+      // cycle
+      const t = (clock / DAY_MS) % 1;
+      let i = 0;
+      while (i < STOPS.length - 1 && t >= STOPS[i + 1].at) i++;
+      const a = STOPS[i];
+      const b = STOPS[i + 1];
+      const f = (t - a.at) / (b.at - a.at);
+      color = lerpColor(a.color, b.color, f);
+      alpha = lerp(a.alpha, b.alpha, f);
+      this.night = Math.max(0, Math.min(1, 1 - Math.abs(t - 0.5) / 0.26));
     }
+
     this.g.visible = true;
-    const t = (clock / DAY_MS) % 1;
-
-    let i = 0;
-    while (i < STOPS.length - 1 && t >= STOPS[i + 1].at) i++;
-    const a = STOPS[i];
-    const b = STOPS[i + 1];
-    const f = (t - a.at) / (b.at - a.at);
-    const color = lerpColor(a.color, b.color, f);
-    const alpha = lerp(a.alpha, b.alpha, f);
-
     this.g.clear();
     this.g.rect(0, 0, w, h).fill({ color, alpha });
-
-    // night amount peaks at midnight (t=0.5), off by mid-dusk/mid-dawn.
-    this.night = Math.max(0, Math.min(1, 1 - Math.abs(t - 0.5) / 0.26));
   }
 
-  /** 0 (day) .. 1 (deep night) — drives house window glow. */
+  /** 0 (day) .. 1 (deep night) — drives the dark HUD theme and window glow. */
   nightAmount(): number {
     return this.night;
   }
 
+  setMode(m: AtmoMode): void {
+    this.mode = m;
+  }
+
+  /** 'n' key: flip between day and night (manual override). */
   toggle(): void {
-    this.enabled = !this.enabled;
+    this.mode = this.mode === 'night' ? 'day' : 'night';
   }
 }
