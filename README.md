@@ -53,9 +53,9 @@ Peaceful economy sandbox — raids are paused (`RAIDS_ENABLED = false`).
 | Right-click / Space | Cancel mode, clear selection |
 | Click unit/building | Select (archers: click ground to move) |
 | `1` `2` `3` | Speed 1× / 2× / 4× |
-| Esc | Pause |
+| `p` | Pause |
 | `g` | Debug: show unit paths |
-| `w` `p` `r` | Cheats: +100 wood, spawn peasant, start raid |
+| `w` `r` | Cheats: +100 wood, start raid |
 
 Autosaves to localStorage every 30s; "New Game" wipes it.
 

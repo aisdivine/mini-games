@@ -216,7 +216,7 @@ async function start(): Promise<void> {
   // Always-visible play controls (essential on touch, where there's no keyboard).
   hud.controlMenu(
     [
-      { id: 'pause', label: '⏸', hint: 'Pause / resume (Esc)' },
+      { id: 'pause', label: '⏸', hint: 'Pause / resume (P)' },
       { id: 'speed', label: '1×', hint: 'Cycle game speed (1/2/3)' },
     ],
     (id) => {
@@ -345,7 +345,7 @@ async function start(): Promise<void> {
   hotkeys.bind('1', () => (speed = 1));
   hotkeys.bind('2', () => (speed = 2));
   hotkeys.bind('3', () => (speed = 4));
-  hotkeys.bind('Escape', () => (paused = !paused));
+  hotkeys.bind('p', () => (paused = !paused));
   hotkeys.bind('s', saveGame);
   hotkeys.bind('S', saveGame);
   hotkeys.bind('Home', resetView);
@@ -357,7 +357,6 @@ async function start(): Promise<void> {
     hud.showMessage(atmosphere.mode === 'night' ? '🌙 Night mode' : '☀️ Day mode');
   });
   hotkeys.bind('w', () => sim.enqueue({ type: 'cheatWood', amount: 100 }));
-  hotkeys.bind('p', () => sim.enqueue({ type: 'spawnPeasant' }));
   hotkeys.bind('r', () => sim.enqueue({ type: 'startRaid' }));
 
   // --- Edge scrolling -------------------------------------------------------
@@ -610,7 +609,7 @@ async function start(): Promise<void> {
       w.raidsEnabled ? 'Enemy raids enabled — click to return to peace' : 'No raids — click to enable enemy attacks',
     );
     // play-control labels
-    hud.setButtonLabel('pause', paused ? '▶' : '⏸', paused ? 'Resume (Esc)' : 'Pause (Esc)');
+    hud.setButtonLabel('pause', paused ? '▶' : '⏸', paused ? 'Resume (P)' : 'Pause (P)');
     hud.setButtonLabel('speed', `${speed}×`, 'Cycle game speed (1/2/3)');
     const icon = (id: string): string => `<svg class="hud-icon"><use href="#${id}"/></svg>`;
     const t = (s: string): string => ` title="${s}"`;
@@ -680,7 +679,7 @@ async function start(): Promise<void> {
 
     hud.setDebug(
       `${hovered ? `tile (${hovered.x}, ${hovered.y})` : 'tile —'}  tick ${w.tick}\n` +
-        `keys: 1/2/3 speed · esc pause · c center · g paths · w +wood · p +peasant · space cancel`,
+        `keys: 1/2/3 speed · p pause · c center · g paths · w +wood · r raid · space cancel`,
     );
   }
 }
