@@ -6,7 +6,6 @@ import {
   EDGE_PAN_MARGIN,
   EDGE_PAN_SPEED,
   MARKET_GOODS,
-  MAX_ACCUM_MS,
   MAX_BUILDING_LEVEL,
   SIM_DT_MS,
   SIM_TICKS_PER_SEC,
@@ -42,6 +41,11 @@ import { Hud } from './ui/hud';
 
 const SAVE_KEY = 'stronghold.save.v1';
 const AUTOSAVE_MS = 30_000;
+// When the tab is hidden/minimized the browser freezes the animation loop, so on
+// return we fast-forward the sim by however long you were away — the world keeps
+// running while you're in another app. Capped so a long absence doesn't lock the
+// page while it catches up (30 min of game time).
+const CATCHUP_MAX_MS = 30 * 60 * 1000;
 
 // Night ground tint — multiplied onto the baked sand so it reads darker and
 // cooler at night (the primary night effect; the screen wash stays light).
@@ -392,12 +396,16 @@ async function start(): Promise<void> {
   let acc = 0;
   let renderClock = 0; // ms, render-only (water shimmer etc.)
   let autosaveTimer = 0;
+  let lastWall = Date.now(); // wall-clock anchor so the sim keeps time across tab hides
   // Track the canvas size so we can keep the view centered when the window
   // resizes (PixiJS resizeTo:window already resizes the renderer itself).
   let lastW = app.screen.width;
   let lastH = app.screen.height;
+  // Persist when the tab is backgrounded so progress survives closing it while away.
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) acc = 0;
+    if (document.hidden && sim.world.outcome === 'playing') {
+      localStorage.setItem(SAVE_KEY, serializeWorld(sim.world));
+    }
   });
 
   app.ticker.add((ticker) => {
@@ -412,17 +420,40 @@ async function start(): Promise<void> {
       lastH = app.screen.height;
     }
 
-    // Fixed-timestep sim with interpolated rendering.
+    // Advance the sim by real elapsed wall-clock time, so it keeps running even
+    // while the tab was hidden (the animation loop is frozen then; on return we
+    // catch up). A large gap = we just came back from another app.
+    const now = Date.now();
+    let elapsed = now - lastWall;
+    lastWall = now;
+    let caughtUp = false;
     if (!paused && sim.world.outcome === 'playing') {
-      acc = Math.min(acc + ticker.deltaMS * speed, MAX_ACCUM_MS * speed);
-      while (acc >= SIM_DT_MS) {
-        sim.tick();
-        acc -= SIM_DT_MS;
+      if (elapsed > 1000) {
+        acc += Math.min(elapsed, CATCHUP_MAX_MS); // catch up at 1× real time, capped
+        caughtUp = true;
+      } else {
+        acc += elapsed * speed;
       }
+      let steps = Math.floor(acc / SIM_DT_MS);
+      acc -= steps * SIM_DT_MS;
+      while (steps-- > 0 && sim.world.outcome === 'playing') sim.tick();
     }
 
-    const events = sim.drainEvents();
+    // After a long catch-up, only surface a game-over (don't flood toasts), and
+    // persist the fast-forwarded world.
+    const drained = sim.drainEvents();
+    const events = caughtUp ? drained.filter((e) => e.type === 'gameOver') : drained;
     handleEvents(events);
+    // Backstop: if the world ended during a hidden-tab catch-up (its event may
+    // have been drained/discarded while away), surface the game-over now.
+    if (sim.world.outcome !== 'playing' && !gameOverShown) {
+      gameOverShown = true;
+      localStorage.removeItem(SAVE_KEY);
+      hud.showGameOver(sim.world.outcome, sim.world.outcomeReason, newGame);
+    }
+    if (caughtUp && sim.world.outcome === 'playing') {
+      localStorage.setItem(SAVE_KEY, serializeWorld(sim.world));
+    }
     renderClock += ticker.deltaMS;
     water.update(renderClock);
     ambient.update(renderClock, ticker.deltaMS);
@@ -447,6 +478,24 @@ async function start(): Promise<void> {
       }
     }
   });
+
+  // While the tab is hidden the animation loop is frozen, so drive the sim from
+  // a timer instead. Browsers throttle background timers (≈1/s, sometimes much
+  // slower), so this advances in coarse steps — and the rAF loop fully catches
+  // up the instant you return. Together: the world keeps running while you're
+  // away, whether the browser keeps the timer alive or not.
+  setInterval(() => {
+    // Visible → the rAF loop owns timing; paused/over → nothing to advance.
+    if (!document.hidden || paused || sim.world.outcome !== 'playing') return;
+    const now = Date.now();
+    acc += Math.min(now - lastWall, CATCHUP_MAX_MS);
+    lastWall = now;
+    let steps = Math.floor(acc / SIM_DT_MS);
+    acc -= steps * SIM_DT_MS;
+    while (steps-- > 0 && sim.world.outcome === 'playing') sim.tick();
+    sim.drainEvents(); // no UI while hidden; outcome is surfaced on return
+    if (sim.world.outcome === 'playing') localStorage.setItem(SAVE_KEY, serializeWorld(sim.world));
+  }, 1000);
 
   function handleEvents(events: SimEvent[]): void {
     for (const e of events) {
