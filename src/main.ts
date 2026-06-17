@@ -478,23 +478,10 @@ async function start(): Promise<void> {
     }
   });
 
-  // While the tab is hidden the animation loop is frozen, so drive the sim from
-  // a timer instead. Browsers throttle background timers (≈1/s, sometimes much
-  // slower), so this advances in coarse steps — and the rAF loop fully catches
-  // up the instant you return. Together: the world keeps running while you're
-  // away, whether the browser keeps the timer alive or not.
-  setInterval(() => {
-    // Visible → the rAF loop owns timing; paused/over → nothing to advance.
-    if (!document.hidden || paused || sim.world.outcome !== 'playing') return;
-    const now = Date.now();
-    acc += Math.min(now - lastWall, CATCHUP_MAX_MS);
-    lastWall = now;
-    let steps = Math.floor(acc / SIM_DT_MS);
-    acc -= steps * SIM_DT_MS;
-    while (steps-- > 0 && sim.world.outcome === 'playing') sim.tick();
-    sim.drainEvents(); // no UI while hidden; outcome is surfaced on return
-    if (sim.world.outcome === 'playing') localStorage.setItem(SAVE_KEY, serializeWorld(sim.world));
-  }, 1000);
+  // No always-on background timer: while the tab is hidden nothing runs (the
+  // animation loop is frozen), and the rAF loop fast-forwards the elapsed time
+  // the moment you return (see the catch-up above). So the sim only advances for
+  // the period you were away — it isn't churning all the time.
 
   function handleEvents(events: SimEvent[]): void {
     for (const e of events) {
