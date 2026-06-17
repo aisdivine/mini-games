@@ -73,6 +73,8 @@ body {
   display: flex;
   gap: 5px;
   align-items: center;
+  pointer-events: auto; /* hoverable for tooltips; the gaps still pass through */
+  cursor: help;
 }
 
 .hud-icon {
@@ -467,4 +469,60 @@ body.night #hud-market button {
     padding: 10px 14px;
     font-size: 14px;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Barracks training panel — shares the market panel's look.
+   --------------------------------------------------------------------------- */
+#hud-barracks {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: none;
+  width: 240px;
+  max-height: 56vh;
+  overflow-y: auto;
+  background: rgba(20, 14, 8, 0.92);
+  border: 1px solid #6b5436;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 13px;
+  pointer-events: auto;
+  transition: background-color 1s ease, color 1s ease, border-color 1s ease;
+}
+.b-cost {
+  color: #b8ad97;
+  font-size: 12px;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+#hud-barracks button {
+  background: #4a3a20;
+  color: #f0e6d2;
+  border: 1px solid #6b5436;
+  border-radius: 4px;
+  padding: 5px 9px;
+  font-size: 12px;
+  cursor: pointer;
+}
+#hud-barracks button:hover { background: #5e4a28; }
+#hud-barracks button:disabled { opacity: 0.4; cursor: default; }
+
+body.night #hud-barracks {
+  background: rgba(11, 13, 22, 0.92);
+  color: #c6cdde;
+  border-color: #39425f;
+}
+body.night #hud-barracks .m-title { color: #cdbd7a; }
+body.night #hud-barracks button { background: #2a3350; border-color: #39425f; color: #e6ecf7; }
+
+@media (max-width: 860px), (pointer: coarse) {
+  #hud-barracks {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 70px);
+    max-height: 48vh;
+  }
+  #hud-barracks button { min-height: 40px; padding: 8px 12px; font-size: 13px; }
 }

@@ -24,6 +24,7 @@ import {
   type BuildingType,
   type FoodType,
   type Resource,
+  type SoldierType,
   type StockResource,
   type Terrain,
 } from '../config';
@@ -55,7 +56,8 @@ export interface Building {
   state: ProductionState;
 }
 
-export type UnitRole = 'peasant' | 'archer' | 'raider';
+// Soldier roles (incl. 'archer') are all SoldierType; plus the worker + enemy.
+export type UnitRole = 'peasant' | 'raider' | SoldierType;
 
 export type Task =
   | { kind: 'idle' }

@@ -8,7 +8,7 @@ import {
   REPATH_COOLDOWN_TICKS,
   UNIT_SPEED,
 } from '../config';
-import { FISH_REGROW_TICKS, TREE_REGROW_TICKS, workTicksAtLevel } from '../config';
+import { FISH_REGROW_TICKS, SOLDIERS, TREE_REGROW_TICKS, workTicksAtLevel, type SoldierType } from '../config';
 import { reserve, commitReservation, deposit, findDepot } from './economy';
 import type { SimEvent } from './events';
 import { inBounds, isPassable } from './grid';
@@ -37,7 +37,7 @@ export function updateUnits(world: World, events: SimEvent[]): void {
     if (unit.repathCooldown > 0) unit.repathCooldown--;
     unstickIfBuried(world, unit);
     if (unit.role === 'peasant') updatePeasant(world, unit, events);
-    else if (unit.role === 'archer') updateArcherMovement(world, unit);
+    else if (unit.role !== 'raider') updateSoldierMovement(world, unit);
     // Raiders are driven by combat.ts (which runs after units this tick).
   }
 }
@@ -51,7 +51,7 @@ export type MoveStatus = 'moving' | 'arrived' | 'blocked';
 /** Advance one tick toward dest. Handles pathing, invalidation on grid
  *  change, and repath cooldown. 'blocked' means a repath just failed —
  *  the destination is currently unreachable. */
-export function moveToward(world: World, unit: Unit, dest: Vec2): MoveStatus {
+export function moveToward(world: World, unit: Unit, dest: Vec2, speed = UNIT_SPEED): MoveStatus {
   const destX = Math.floor(dest.x);
   const destY = Math.floor(dest.y);
 
@@ -76,7 +76,7 @@ export function moveToward(world: World, unit: Unit, dest: Vec2): MoveStatus {
     unit.pathVersion = world.gridVersion;
   }
 
-  let budget = UNIT_SPEED;
+  let budget = speed;
   while (budget > 0 && unit.path && unit.path.length > 0) {
     const wp = unit.path[0];
     const cx = wp.x + 0.5;
@@ -394,9 +394,12 @@ function handleBlocked(world: World, unit: Unit): void {
 // Archers: player-directed movement only (firing lives in combat.ts)
 // ---------------------------------------------------------------------------
 
-function updateArcherMovement(world: World, unit: Unit): void {
+// Soldiers (archers, infantry, cavalry, siege, support): obey a player move
+// order here; auto-engaging the enemy is handled in combat.ts when idle.
+function updateSoldierMovement(world: World, unit: Unit): void {
   if (unit.task.kind !== 'goTo') return;
-  const status = moveToward(world, unit, unit.task.dest);
+  const def = SOLDIERS[unit.role as SoldierType];
+  const status = moveToward(world, unit, unit.task.dest, def ? def.speed : UNIT_SPEED);
   if (status !== 'moving') unit.task = { kind: 'idle' };
 }
 

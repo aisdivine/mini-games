@@ -1,12 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="34" height="46" viewBox="0 0 34 46" data-anchor="17,46" data-team-fill="#C0392B">
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="46" viewBox="0 0 34 46" data-anchor="17,46" data-team-fill="#3A5FB5" data-unit="archer">
 <ellipse cx="17" cy="44" rx="11" ry="3.5" fill="#00000022"/>
 <rect x="12" y="34" width="4.5" height="10" rx="2" fill="#5A4632"/><rect x="18" y="34" width="4.5" height="10" rx="2" fill="#4A3826"/>
-<path d="M10 16 Q10 10 17 10 Q24 10 24 16 L26 35 L8 35 Z" fill="#C0392B"/>
-<path d="M17 10 Q24 10 24 16 L26 35 L17 35 Z" fill="#9E2A20"/>
-<path d="M3 4 Q-4 23 3 42" stroke="#6B4A2B" stroke-width="2.4" fill="none" stroke-linecap="round" transform="translate(3,-2)"/>
-<line x1="5" y1="3" x2="5" y2="41" stroke="#E8DFC8" stroke-width="0.7"/>
-<path d="M10 18 L4 16" stroke="#E8B58C" stroke-width="3.5" stroke-linecap="round"/>
+<rect x="20" y="6" width="5" height="13" rx="1" fill="#6B4F30" transform="rotate(16 22 12)"/><line x1="23" y1="5" x2="25" y2="9" stroke="#C0392B" stroke-width="1"/><line x1="25" y1="6" x2="27" y2="10" stroke="#C0392B" stroke-width="1"/>
+<path d="M10 16 Q10 10 17 10 Q24 10 24 16 L26 35 L8 35 Z" fill="#3A5FB5"/><path d="M17 10 Q24 10 24 16 L26 35 L17 35 Z" fill="#2E4C94"/>
+<path d="M3 -2 Q-3 18 3 38" stroke="#6B4A2B" stroke-width="2.4" fill="none" stroke-linecap="round"/><line x1="3" y1="-2" x2="3" y2="38" stroke="#E8DFC8" stroke-width="0.7"/>
+<path d="M10 18 L4 18" stroke="#E8B58C" stroke-width="3.5" stroke-linecap="round"/><path d="M24 17 L27 26" stroke="#E0A87E" stroke-width="3.5" stroke-linecap="round"/>
 <circle cx="17" cy="6" r="6.5" fill="#E8B58C"/>
-<path d="M10 6 Q10 -1 17 -1 Q24 -1 24 6 Z" fill="#3F6E37"/>
-<circle cx="14.5" cy="6.5" r="0.9" fill="#3A2A19"/><circle cx="19.5" cy="6.5" r="0.9" fill="#3A2A19"/>
+<path d="M9 7 Q9 -2 17 -2 Q25 -2 25 7 Q17 3 9 7 Z" fill="#2E4C94"/>
+<circle cx="14.5" cy="7" r="0.9" fill="#3A2A19"/><circle cx="19.5" cy="7" r="0.9" fill="#3A2A19"/>
 </svg>

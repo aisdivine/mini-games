@@ -5,12 +5,26 @@
 // by key — that keeps the per-villager coloring while using the new art.
 
 import type { Texture } from 'pixi.js';
-import type { BuildingType } from '../config';
+import type { BuildingType, SoldierType } from '../config';
 import type { UnitRole } from '../sim/world';
 import peasantSvg from '../art/v2/peasant.svg?raw';
-import archerSvg from '../art/v2/archer.svg?raw';
 import raiderSvg from '../art/v2/raider.svg?raw';
+import spearman from '../art/v2/pack/units/spearman.svg?raw';
+import manatarms from '../art/v2/pack/units/manatarms.svg?raw';
+import pikeman from '../art/v2/pack/units/pikeman.svg?raw';
+import knight from '../art/v2/pack/units/knight.svg?raw';
+import archer from '../art/v2/pack/units/archer.svg?raw';
+import crossbowman from '../art/v2/pack/units/crossbowman.svg?raw';
+import camel_lancer from '../art/v2/pack/units/camel_lancer.svg?raw';
+import mangonel from '../art/v2/pack/units/mangonel.svg?raw';
+import medic from '../art/v2/pack/units/medic.svg?raw';
+import standard_bearer from '../art/v2/pack/units/standard_bearer.svg?raw';
 import { rasterizeSvg } from './assets';
+
+const SOLDIER_SVG: Record<SoldierType, string> = {
+  spearman, manatarms, pikeman, knight, archer, crossbowman,
+  camel_lancer, mangonel, medic, standard_bearer,
+};
 
 // Skin tones from the art spec, indexed by `unit.id % SKIN_TONES.length`.
 export const SKIN_TONES = [0xf2c9a0, 0xe8b58c, 0xd9a479, 0xc08a5e, 0x9a6a42];
@@ -75,15 +89,17 @@ function keyOf(role: UnitRole, skinIndex: number, tunic: number): string {
 export async function loadUnitTextures(): Promise<UnitTextures> {
   const srcByRole: Record<UnitRole, string> = {
     peasant: peasantSvg,
-    archer: archerSvg,
     raider: raiderSvg,
+    ...SOLDIER_SVG,
   };
   const map = new Map<string, Texture>();
 
+  // Peasants vary skin AND job-tunic; everyone else (raider + soldiers) varies
+  // skin only and keeps their baked team/role color.
   const jobs: { role: UnitRole; tunics: number[] }[] = [
     { role: 'peasant', tunics: TUNICS },
-    { role: 'archer', tunics: [IDLE_TUNIC] },
     { role: 'raider', tunics: [IDLE_TUNIC] },
+    ...(Object.keys(SOLDIER_SVG) as SoldierType[]).map((role) => ({ role, tunics: [IDLE_TUNIC] })),
   ];
 
   const tasks: Promise<void>[] = [];

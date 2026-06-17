@@ -84,6 +84,7 @@ export type BuildingType =
   | 'bakery'
   | 'quarry'
   | 'market'
+  | 'barracks'
   | 'wall'
   | 'tower';
 
@@ -189,6 +190,11 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     type: 'market', label: 'Market', size: { w: 2, h: 2 }, costWood: 14, hp: 120,
     buildable: true, color: 0xb98a4e, height: 24,
   },
+  // Military trainer — select it to open the soldier training panel.
+  barracks: {
+    type: 'barracks', label: 'Barracks', size: { w: 3, h: 3 }, costWood: 20, hp: 250,
+    buildable: true, color: 0x9a6a42, height: 40,
+  },
   wall: {
     type: 'wall', label: 'Wall', size: { w: 1, h: 1 }, costWood: 1, hp: 150,
     buildable: true, color: 0x7d7d88, height: 30,
@@ -217,6 +223,60 @@ export function workTicksAtLevel(baseTicks: number, level: number): number {
 export function upgradeWoodCost(type: BuildingType, currentLevel: number): number {
   return Math.max(10, BUILDINGS[type].costWood * 2 * currentLevel);
 }
+
+// ---------------------------------------------------------------------------
+// Soldiers — trained at the Barracks. Each is a unit role with combat stats.
+// 'archer' overlaps the legacy keep-recruited archer (same role/stats).
+// ---------------------------------------------------------------------------
+
+export type SoldierType =
+  | 'spearman'
+  | 'manatarms'
+  | 'pikeman'
+  | 'knight'
+  | 'archer'
+  | 'crossbowman'
+  | 'camel_lancer'
+  | 'mangonel'
+  | 'medic'
+  | 'standard_bearer';
+
+export type TrainCost = Partial<Record<'wood' | 'stone' | 'gold' | 'food', number>>;
+
+export interface SoldierDef {
+  type: SoldierType;
+  label: string;
+  hp: number;
+  damage: number; // per hit (0 = non-combatant)
+  range: number; // tiles; <=1.8 is melee, larger is ranged
+  cooldownTicks: number; // ticks between attacks/heals
+  speed: number; // tiles per tick
+  cost: TrainCost;
+  special?: 'heal' | 'aura' | 'splash';
+  big?: boolean; // 110×100 mounted/siege sprite
+}
+
+export const SOLDIERS: Record<SoldierType, SoldierDef> = {
+  spearman: { type: 'spearman', label: 'Spearman', hp: 70, damage: 10, range: 1.7, cooldownTicks: 18, speed: 0.12, cost: { wood: 6, food: 2 } },
+  manatarms: { type: 'manatarms', label: 'Man-at-Arms', hp: 110, damage: 14, range: 1.7, cooldownTicks: 20, speed: 0.11, cost: { wood: 8, gold: 6 } },
+  pikeman: { type: 'pikeman', label: 'Pikeman', hp: 95, damage: 12, range: 2.4, cooldownTicks: 24, speed: 0.1, cost: { wood: 8, stone: 2 } },
+  knight: { type: 'knight', label: 'Knight', hp: 200, damage: 22, range: 1.7, cooldownTicks: 22, speed: 0.12, cost: { gold: 20, stone: 6 } },
+  archer: { type: 'archer', label: 'Archer', hp: 60, damage: 12, range: 6, cooldownTicks: 20, speed: 0.12, cost: { wood: 5 } },
+  crossbowman: { type: 'crossbowman', label: 'Crossbowman', hp: 70, damage: 20, range: 7, cooldownTicks: 40, speed: 0.1, cost: { wood: 6, stone: 2 } },
+  camel_lancer: { type: 'camel_lancer', label: 'Camel Lancer', hp: 90, damage: 18, range: 1.8, cooldownTicks: 18, speed: 0.22, cost: { gold: 16, food: 3 }, big: true },
+  mangonel: { type: 'mangonel', label: 'Mangonel', hp: 80, damage: 24, range: 8, cooldownTicks: 70, speed: 0.05, cost: { wood: 14, stone: 10 }, special: 'splash', big: true },
+  medic: { type: 'medic', label: 'Field Medic', hp: 60, damage: 0, range: 1.7, cooldownTicks: 30, speed: 0.13, cost: { gold: 10 }, special: 'heal' },
+  standard_bearer: { type: 'standard_bearer', label: 'Standard-Bearer', hp: 90, damage: 8, range: 1.7, cooldownTicks: 24, speed: 0.12, cost: { gold: 12 }, special: 'aura' },
+};
+
+export function isSoldier(role: string): role is SoldierType {
+  return Object.prototype.hasOwnProperty.call(SOLDIERS, role);
+}
+
+export const HEAL_AMOUNT = 8; // hp a medic restores per heal tick
+export const AURA_RADIUS = 5; // tiles; standard-bearer damage buff range
+export const AURA_DAMAGE_MULT = 1.3;
+export const MANGONEL_SPLASH = 2.5; // tiles radius of splash damage
 
 // ---------------------------------------------------------------------------
 // Units (used from M3 on)

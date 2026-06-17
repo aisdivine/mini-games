@@ -4,16 +4,21 @@
 // meaningful without any siege AI.
 
 import {
-  ARCHER_COOLDOWN_TICKS,
-  ARCHER_DAMAGE,
-  ARCHER_RANGE,
   ARCHER_TOWER_RANGE_BONUS,
+  AURA_DAMAGE_MULT,
+  AURA_RADIUS,
   BUILDINGS,
+  HEAL_AMOUNT,
+  isSoldier,
+  MANGONEL_SPLASH,
   MAP_W,
   RAIDER_COOLDOWN_TICKS,
   RAIDER_COUNT,
   RAIDER_DAMAGE,
   RAIDER_HP,
+  SOLDIERS,
+  type SoldierDef,
+  type SoldierType,
 } from '../config';
 import type { SimEvent } from './events';
 import { isPassable } from './grid';
@@ -39,14 +44,14 @@ export function updateCombat(world: World, events: SimEvent[]): void {
 
   let raidersAlive = 0;
   for (const unit of world.units.values()) {
-    if (unit.role === 'archer') updateArcherFire(world, unit, events);
+    if (isSoldier(unit.role)) updateSoldier(world, unit, events);
     else if (unit.role === 'raider') {
       raidersAlive++;
       updateRaider(world, unit, events);
     }
   }
 
-  // Cull dead raiders (archers/peasants take no damage in the slice).
+  // Cull the dead (raiders and any soldiers that fell).
   for (const unit of [...world.units.values()]) {
     if (unit.hp <= 0) {
       world.units.delete(unit.id);
@@ -74,26 +79,99 @@ function spawnRaid(world: World, events: SimEvent[]): void {
 }
 
 // ---------------------------------------------------------------------------
-// Archers
+// Soldiers (auto-engage when not under a manual move order)
 // ---------------------------------------------------------------------------
 
-function updateArcherFire(world: World, archer: Unit, events: SimEvent[]): void {
-  if (archer.attackCooldown > 0) return;
-  const range = ARCHER_RANGE + (nearTower(world, archer) ? ARCHER_TOWER_RANGE_BONUS : 0);
-  let target: Unit | null = null;
-  let bestDist = range;
+function dist2(a: Unit, b: { pos: Unit['pos'] }): number {
+  return Math.hypot(b.pos.x - a.pos.x, b.pos.y - a.pos.y);
+}
+
+function nearestRaider(world: World, from: Unit): Unit | null {
+  let best: Unit | null = null;
+  let bd = Infinity;
   for (const u of world.units.values()) {
     if (u.role !== 'raider' || u.hp <= 0) continue;
-    const d = Math.hypot(u.pos.x - archer.pos.x, u.pos.y - archer.pos.y);
-    if (d <= bestDist) {
-      bestDist = d;
-      target = u;
-    }
+    const d = dist2(from, u);
+    if (d < bd) { bd = d; best = u; }
   }
+  return best;
+}
+
+function nearestSoldier(world: World, from: Unit): Unit | null {
+  let best: Unit | null = null;
+  let bd = Infinity;
+  for (const u of world.units.values()) {
+    if (u.hp <= 0 || !isSoldier(u.role)) continue;
+    const d = dist2(from, u);
+    if (d < bd) { bd = d; best = u; }
+  }
+  return best;
+}
+
+function nearestWounded(world: World, medic: Unit): Unit | null {
+  let best: Unit | null = null;
+  let bd = Infinity;
+  for (const u of world.units.values()) {
+    if (u.id === medic.id || u.hp <= 0 || !isSoldier(u.role)) continue;
+    if (u.hp >= SOLDIERS[u.role as SoldierType].hp) continue;
+    const d = dist2(medic, u);
+    if (d < bd) { bd = d; best = u; }
+  }
+  return best;
+}
+
+/** A friendly standard-bearer within aura range buffs this unit's damage. */
+function buffed(world: World, unit: Unit): boolean {
+  for (const u of world.units.values()) {
+    if (u.role !== 'standard_bearer' || u.hp <= 0) continue;
+    if (dist2(unit, u) <= AURA_RADIUS) return true;
+  }
+  return false;
+}
+
+function splash(world: World, center: Unit, dmg: number): void {
+  for (const u of world.units.values()) {
+    if (u.role !== 'raider' || u.hp <= 0 || u.id === center.id) continue;
+    if (dist2(center, u) <= MANGONEL_SPLASH) u.hp -= dmg * 0.5;
+  }
+}
+
+function updateSoldier(world: World, unit: Unit, events: SimEvent[]): void {
+  if (unit.task.kind === 'goTo') return; // moving on a player order (units.ts)
+  const def = SOLDIERS[unit.role as SoldierType];
+  if (def.special === 'heal') {
+    healNearby(world, unit, def);
+    return;
+  }
+  const target = nearestRaider(world, unit);
+  if (!target) return; // no enemies — hold position
+  const ranged = def.range > 1.9;
+  const range = def.range + (ranged && nearTower(world, unit) ? ARCHER_TOWER_RANGE_BONUS : 0);
+  if (dist2(unit, target) <= range) {
+    if (unit.attackCooldown === 0 && def.damage > 0) {
+      unit.attackCooldown = def.cooldownTicks;
+      const dmg = def.damage * (buffed(world, unit) ? AURA_DAMAGE_MULT : 1);
+      target.hp -= dmg;
+      if (ranged) events.push({ type: 'arrow', from: { ...unit.pos }, to: { ...target.pos } });
+      if (def.special === 'splash') splash(world, target, dmg);
+    }
+  } else {
+    moveToward(world, unit, target.pos, def.speed);
+  }
+}
+
+function healNearby(world: World, medic: Unit, def: SoldierDef): void {
+  const target = nearestWounded(world, medic);
   if (!target) return;
-  archer.attackCooldown = ARCHER_COOLDOWN_TICKS;
-  target.hp -= ARCHER_DAMAGE;
-  events.push({ type: 'arrow', from: { ...archer.pos }, to: { ...target.pos } });
+  if (dist2(medic, target) <= def.range) {
+    if (medic.attackCooldown === 0) {
+      medic.attackCooldown = def.cooldownTicks;
+      const max = SOLDIERS[target.role as SoldierType].hp;
+      target.hp = Math.min(max, target.hp + HEAL_AMOUNT);
+    }
+  } else {
+    moveToward(world, medic, target.pos, def.speed);
+  }
 }
 
 function nearTower(world: World, archer: Unit): boolean {
@@ -114,6 +192,18 @@ function nearTower(world: World, archer: Unit): boolean {
 // ---------------------------------------------------------------------------
 
 function updateRaider(world: World, raider: Unit, events: SimEvent[]): void {
+  // Fight back: if a defending soldier is right next to us, hack at it instead
+  // of marching on. (Soldiers close in via their own auto-engage.)
+  const foe = nearestSoldier(world, raider);
+  if (foe && dist2(raider, foe) <= 1.7) {
+    raider.path = null;
+    if (raider.attackCooldown === 0) {
+      raider.attackCooldown = RAIDER_COOLDOWN_TICKS;
+      foe.hp -= RAIDER_DAMAGE;
+    }
+    return;
+  }
+
   let target = raider.targetId !== null ? world.buildings.get(raider.targetId) : undefined;
 
   // Swing at the target if we're next to it.

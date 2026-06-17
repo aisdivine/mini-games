@@ -7,16 +7,22 @@ import {
   ARCHER_HP,
   BUILDINGS,
   DEMOLISH_REFUND,
+  FOOD_TYPES,
+  isSoldier,
   MARKET_GOODS,
   MAX_BUILDING_LEVEL,
   RAID_AT_TICK,
+  SOLDIERS,
   upgradeWoodCost,
   type BuildingType,
   type Resource,
+  type SoldierType,
+  type TrainCost,
 } from '../config';
 import type { SimEvent } from './events';
 import { deposit, resourceCount } from './economy';
 import { canPlace } from './grid';
+import { totalFood } from './population';
 import {
   placeBuildingRaw,
   removeBuilding,
@@ -32,6 +38,7 @@ export type Command =
   | { type: 'upgrade'; buildingId: number }
   | { type: 'moveUnit'; unitId: number; dest: Vec2 }
   | { type: 'recruitArcher' }
+  | { type: 'trainSoldier'; soldier: SoldierType }
   | { type: 'startRaid' }
   | { type: 'setRaids'; on: boolean }
   | { type: 'trade'; resource: Resource; dir: 'buy' | 'sell' }
@@ -117,10 +124,10 @@ export function applyCommand(world: World, cmd: Command, events: SimEvent[]): vo
     }
 
     case 'moveUnit': {
-      // Archer-only: ordering a bound peasant around would orphan its
+      // Soldiers only: ordering a bound peasant around would orphan its
       // workplace (workerId stays set but the cycle never resumes).
       const unit = world.units.get(cmd.unitId);
-      if (!unit || unit.role !== 'archer') return;
+      if (!unit || !isSoldier(unit.role)) return;
       unit.task = { kind: 'goTo', dest: { ...cmd.dest }, then: { kind: 'none' } };
       unit.path = null; // force repath next tick
       unit.targetId = null;
@@ -136,6 +143,23 @@ export function applyCommand(world: World, cmd: Command, events: SimEvent[]): vo
       if (!keep) return;
       world.stockpile.wood -= ARCHER_COST_WOOD;
       spawnUnit(world, 'archer', { ...keep.accessTile }, ARCHER_HP);
+      return;
+    }
+
+    case 'trainSoldier': {
+      const def = SOLDIERS[cmd.soldier];
+      const barracks = [...world.buildings.values()].find((b) => b.type === 'barracks');
+      if (!barracks) {
+        events.push({ type: 'rejected', reason: 'Build a Barracks to train soldiers' });
+        return;
+      }
+      if (!canAfford(world, def.cost)) {
+        events.push({ type: 'rejected', reason: `Can't afford ${def.label}` });
+        return;
+      }
+      payCost(world, def.cost);
+      spawnUnit(world, cmd.soldier, { ...barracks.accessTile }, def.hp);
+      events.push({ type: 'message', text: `${def.label} trained` });
       return;
     }
 
@@ -197,5 +221,34 @@ export function applyCommand(world: World, cmd: Command, events: SimEvent[]): vo
       world.stockpile.wood += cmd.amount;
       return;
     }
+  }
+}
+
+function canAfford(world: World, cost: TrainCost): boolean {
+  if ((cost.wood ?? 0) > world.stockpile.wood) return false;
+  if ((cost.stone ?? 0) > world.stockpile.stone) return false;
+  if ((cost.gold ?? 0) > world.gold) return false;
+  if ((cost.food ?? 0) > totalFood(world)) return false;
+  return true;
+}
+
+function payCost(world: World, cost: TrainCost): void {
+  if (cost.wood) world.stockpile.wood -= cost.wood;
+  if (cost.stone) world.stockpile.stone -= cost.stone;
+  if (cost.gold) world.gold -= cost.gold;
+  if (cost.food) consumeGranary(world, cost.food);
+}
+
+/** Spend `n` food from the granary, drawing from the most-abundant type first. */
+function consumeGranary(world: World, n: number): void {
+  let left = n;
+  while (left > 0) {
+    let best: (typeof FOOD_TYPES)[number] | null = null;
+    for (const f of FOOD_TYPES) {
+      if (world.granaryFood[f] > 0 && (best === null || world.granaryFood[f] > world.granaryFood[best])) best = f;
+    }
+    if (best === null) break;
+    world.granaryFood[best]--;
+    left--;
   }
 }

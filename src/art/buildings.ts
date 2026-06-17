@@ -22,11 +22,12 @@ import mill from './v2/pack/buildings/mill_base.svg?raw';
 import bakery from './v2/pack/buildings/bakery_base.svg?raw';
 import quarry from './v2/pack/buildings/quarry_base.svg?raw';
 import market from './v2/pack/decor/market_base.svg?raw';
+import barracks from './v2/pack/buildings/barracks_base.svg?raw';
 import campfire from './v2/pack/buildings/campfire_base.svg?raw';
 
 const BASE_SVG: Record<BuildingType, string> = {
   keep, tower, wall, house, stockpile, granary, woodcutter,
-  appleOrchard, hunter, fishery, wheatFarm, mill, bakery, quarry, market, campfire,
+  appleOrchard, hunter, fishery, wheatFarm, mill, bakery, quarry, market, barracks, campfire,
 };
 
 /** Pull width/height/data-anchor off an SVG root. anchor falls back to the

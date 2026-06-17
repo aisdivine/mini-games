@@ -5,14 +5,18 @@ import {
   BUILDINGS,
   EDGE_PAN_MARGIN,
   EDGE_PAN_SPEED,
+  isSoldier,
   MARKET_GOODS,
   MAX_BUILDING_LEVEL,
   SIM_DT_MS,
   SIM_TICKS_PER_SEC,
+  SOLDIERS,
   upgradeWoodCost,
   workTicksAtLevel,
   type BuildingType,
   type Resource,
+  type SoldierType,
+  type TrainCost,
 } from './config';
 import { Sim } from './sim/sim';
 import type { SimEvent } from './sim/events';
@@ -74,11 +78,30 @@ type Selection =
 /** Units the player can box-select and command (military). Workers are excluded
  *  so commanding them never orphans their job. Soldier roles join this later. */
 function isCommandable(u: Unit): boolean {
-  return u.role === 'archer';
+  return isSoldier(u.role);
+}
+
+/** Compact cost string for a soldier, e.g. "🪵8 🪨2". */
+function costText(cost: TrainCost): string {
+  const parts: string[] = [];
+  if (cost.wood) parts.push(`🪵${cost.wood}`);
+  if (cost.stone) parts.push(`🪨${cost.stone}`);
+  if (cost.gold) parts.push(`🪙${cost.gold}`);
+  if (cost.food) parts.push(`🍖${cost.food}`);
+  return parts.join(' ');
+}
+
+function canAffordTrain(w: { stockpile: { wood: number; stone: number }; gold: number; granaryFood: Record<string, number> }, cost: TrainCost): boolean {
+  if ((cost.wood ?? 0) > w.stockpile.wood) return false;
+  if ((cost.stone ?? 0) > w.stockpile.stone) return false;
+  if ((cost.gold ?? 0) > w.gold) return false;
+  const food = w.granaryFood.bread + w.granaryFood.apples + w.granaryFood.meat + w.granaryFood.fish;
+  if ((cost.food ?? 0) > food) return false;
+  return true;
 }
 
 const BUILD_ORDER: BuildingType[] = [
-  'house', 'granary', 'appleOrchard', 'hunter', 'fishery', 'woodcutter', 'quarry', 'wheatFarm', 'mill', 'bakery', 'market', 'tower',
+  'house', 'granary', 'appleOrchard', 'hunter', 'fishery', 'woodcutter', 'quarry', 'wheatFarm', 'mill', 'bakery', 'market', 'barracks', 'tower',
 ];
 
 // HUD resource icon id for a tradeable resource.
@@ -246,6 +269,16 @@ async function start(): Promise<void> {
       buy: g.buy,
     })),
     (id, dir) => sim.enqueue({ type: 'trade', resource: id as Resource, dir }),
+  );
+
+  // Barracks training panel (shown when a Barracks is selected).
+  hud.buildBarracks(
+    (Object.keys(SOLDIERS) as SoldierType[]).map((id) => ({
+      id,
+      label: SOLDIERS[id].label,
+      cost: costText(SOLDIERS[id].cost),
+    })),
+    (id) => sim.enqueue({ type: 'trainSoldier', soldier: id as SoldierType }),
   );
 
   // Upgrade button inside the selection panel (event-delegated so it survives
@@ -418,6 +451,17 @@ async function start(): Promise<void> {
   });
   window.addEventListener('mouseout', (e) => {
     if (!e.relatedTarget) mouse.allowed = false; // cursor left the window
+  });
+
+  // Top-bar inventory tooltips: hovering a stat chip shows what it is.
+  let topTip: string | null = null;
+  const topBarEl = document.getElementById('hud-top')!;
+  topBarEl.addEventListener('mousemove', (e) => {
+    const chip = (e.target as HTMLElement).closest('.stat') as HTMLElement | null;
+    topTip = chip?.dataset.tip ?? null;
+  });
+  topBarEl.addEventListener('mouseleave', () => {
+    topTip = null;
   });
 
   function edgeScroll(dtMs: number): void {
@@ -652,10 +696,10 @@ async function start(): Promise<void> {
       ? `${Math.floor(raidIn / 60)}:${String(raidIn % 60).padStart(2, '0')}`
       : null;
     const raidStat = !w.raidsEnabled
-      ? `<span class="stat" title="Raids are off — peaceful sandbox. Toggle in the build menu.">☮ peaceful</span>`
+      ? `<span class="stat" data-tip="Raids are off — peaceful sandbox. Toggle in the build menu.">☮ peaceful</span>`
       : mmss
-        ? `<span class="stat" title="Time until the next enemy raid arrives from the east.">⚔ raid in ${mmss}</span>`
-        : `<span class="stat" title="A raid is underway — defend your keep!">⚔ raid!</span>`;
+        ? `<span class="stat" data-tip="Time until the next enemy raid arrives from the east.">⚔ raid in ${mmss}</span>`
+        : `<span class="stat" data-tip="A raid is underway — defend your keep!">⚔ raid!</span>`;
     // keep the build-menu toggle's label in sync with the live state
     hud.setButtonLabel(
       'raids',
@@ -666,23 +710,28 @@ async function start(): Promise<void> {
     hud.setButtonLabel('pause', paused ? '▶' : '⏸', paused ? 'Resume (P)' : 'Pause (P)');
     hud.setButtonLabel('speed', `${speed}×`, 'Cycle game speed (1/2/3)');
     const icon = (id: string): string => `<svg class="hud-icon"><use href="#${id}"/></svg>`;
-    const t = (s: string): string => ` title="${s}"`;
+    // data-tip drives the on-theme hover tooltip (see the top-bar listener).
+    const t = (s: string): string => ` data-tip="${s}"`;
     hud.setTopBar(
       [
         `<span class="stat"${t('Wood — your main building material. Woodcutters chop it from trees.')}>${icon('i-wood')} ${w.stockpile.wood}</span>`,
-        `<span class="stat"${t('Wheat — grown on Wheat Farms, milled into flour.')}>${icon('i-wheat')} ${w.stockpile.wheat}</span>`,
-        `<span class="stat"${t('Flour — milled from wheat at the Mill, baked into bread.')}>${icon('i-flour')} ${w.stockpile.flour}</span>`,
-        `<span class="stat"${t('Stone — mined at the mountain by a Quarry. A tradeable building material.')}>${icon('i-stone')} ${w.stockpile.stone}</span>`,
-        `<span class="stat"${t('Food in the granary: bread / apples / meat / fish. Peasants eat every 20s; a varied diet boosts popularity.')}>${icon('i-bread')} ${w.granaryFood.bread} ${icon('i-apple')} ${w.granaryFood.apples} ${icon('i-meat')} ${w.granaryFood.meat} ${icon('i-fish')} ${w.granaryFood.fish}</span>`,
-        `<span class="stat"${t('Gold — earned by selling goods at the Market, spent buying goods you need.')}>🪙 ${w.gold}</span>`,
-        `<span class="stat"${t('Population / housing capacity. Build Houses to raise the cap so more peasants can move in.')}>👥 ${pop}/${housing}</span>`,
-        `<span class="stat"${t('Popularity — rises when peasants are fed (varied diet helps), falls when they starve. Hits 0 = you lose.')}>❤️ ${w.popularity} (food ${w.lastFoodDelta >= 0 ? '+' : ''}${w.lastFoodDelta})</span>`,
+        `<span class="stat"${t('Wheat — grown on Wheat Farms, milled into flour at the Mill.')}>${icon('i-wheat')} ${w.stockpile.wheat}</span>`,
+        `<span class="stat"${t('Flour — milled from wheat, baked into bread at the Bakery.')}>${icon('i-flour')} ${w.stockpile.flour}</span>`,
+        `<span class="stat"${t('Stone — mined at the mountain by a Quarry. Tradeable building material.')}>${icon('i-stone')} ${w.stockpile.stone}</span>`,
+        `<span class="stat"${t('Bread — food. Baked at the Bakery (wheat → flour → bread).')}>${icon('i-bread')} ${w.granaryFood.bread}</span>`,
+        `<span class="stat"${t('Apples — food from the Apple Orchard.')}>${icon('i-apple')} ${w.granaryFood.apples}</span>`,
+        `<span class="stat"${t("Meat — food from the Hunter's Hut.")}>${icon('i-meat')} ${w.granaryFood.meat}</span>`,
+        `<span class="stat"${t("Fish — food from the Fisherman's Hut.")}>${icon('i-fish')} ${w.granaryFood.fish}</span>`,
+        `<span class="stat"${t('Gold — earned by selling at the Market, spent buying goods or training soldiers.')}>🪙 ${w.gold}</span>`,
+        `<span class="stat"${t('Population / housing capacity. Build Houses to raise the cap.')}>👥 ${pop}/${housing}</span>`,
+        `<span class="stat"${t('Popularity — rises when peasants are fed (varied diet helps), falls when they starve. 0 = you lose.')}>❤️ ${w.popularity} (food ${w.lastFoodDelta >= 0 ? '+' : ''}${w.lastFoodDelta})</span>`,
         raidStat,
-        `<span class="stat"${t('Game speed — 1/2/3 to change, Space to pause.')}>${paused ? '⏸ paused' : `▶ ${speed}×`}</span>`,
+        `<span class="stat"${t('Game speed — 1/2/3 to change, P to pause.')}>${paused ? '⏸ paused' : `▶ ${speed}×`}</span>`,
       ].join(''),
     );
 
     let marketOpen = false;
+    let barracksOpen = false;
     if (selection.kind === 'building') {
       const b = sim.world.buildings.get(selection.id);
       if (b && b.type === 'market') {
@@ -694,6 +743,15 @@ async function start(): Promise<void> {
           canBuy[g.resource] = w.gold >= g.buy;
         }
         hud.updateMarket(w.gold, counts, canBuy);
+        hud.setInfo('');
+        hud.setAction(null);
+      } else if (b && b.type === 'barracks') {
+        barracksOpen = true;
+        const canTrain: Record<string, boolean> = {};
+        for (const id of Object.keys(SOLDIERS) as SoldierType[]) {
+          canTrain[id] = canAffordTrain(w, SOLDIERS[id].cost);
+        }
+        hud.updateBarracks(canTrain);
         hud.setInfo('');
         hud.setAction(null);
       } else if (b) {
@@ -727,10 +785,14 @@ async function start(): Promise<void> {
       hud.setAction(null);
     }
     hud.showMarket(marketOpen);
+    hud.showBarracks(barracksOpen);
 
-    // Hover tooltip: status of the building under the cursor.
+    // Hover tooltip: top-bar inventory chip takes priority, then the building
+    // under the cursor.
     const hoverB = hovered && mouse.allowed ? buildingAt(w, hovered.x, hovered.y) : null;
-    if (hoverB && (mode.kind === 'select' || mode.kind === 'demolish')) {
+    if (topTip) {
+      hud.showTooltip(topTip, mouse.x, mouse.y);
+    } else if (hoverB && (mode.kind === 'select' || mode.kind === 'demolish')) {
       hud.showTooltip(buildingStatusHtml(hoverB, false), mouse.x, mouse.y);
     } else {
       hud.hideTooltip();

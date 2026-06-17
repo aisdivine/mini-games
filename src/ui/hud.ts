@@ -13,6 +13,12 @@ export interface MarketRow {
   buy: number;
 }
 
+export interface TrainRow {
+  id: string;
+  label: string; // unit name
+  cost: string; // formatted cost text
+}
+
 export class Hud {
   private top = document.getElementById('hud-top')!;
   private controls = document.getElementById('hud-controls')!;
@@ -23,6 +29,8 @@ export class Hud {
     string,
     { count: HTMLElement; sell: HTMLButtonElement; buy: HTMLButtonElement }
   >();
+  private barracks = document.getElementById('hud-barracks')!;
+  private barracksRows = new Map<string, HTMLButtonElement>();
   private debug = document.getElementById('hud-debug')!;
   private messages = document.getElementById('hud-messages')!;
   private info = document.getElementById('hud-info')!;
@@ -118,6 +126,40 @@ export class Hud {
       row.sell.disabled = n < 1;
       row.buy.disabled = !canBuy[id];
     }
+  }
+
+  /** Build the barracks training panel once (one Train button per soldier). */
+  buildBarracks(rows: TrainRow[], onTrain: (id: string) => void): void {
+    this.barracks.innerHTML = '';
+    this.barracksRows.clear();
+    const title = document.createElement('div');
+    title.className = 'm-title';
+    title.textContent = '⚔ Barracks';
+    this.barracks.appendChild(title);
+    for (const r of rows) {
+      const row = document.createElement('div');
+      row.className = 'm-row';
+      const lbl = document.createElement('span');
+      lbl.className = 'm-lbl';
+      lbl.textContent = r.label;
+      const cost = document.createElement('span');
+      cost.className = 'b-cost';
+      cost.textContent = r.cost;
+      const train = document.createElement('button');
+      train.textContent = 'Train';
+      train.addEventListener('click', () => onTrain(r.id));
+      row.append(lbl, cost, train);
+      this.barracks.appendChild(row);
+      this.barracksRows.set(r.id, train);
+    }
+  }
+
+  showBarracks(show: boolean): void {
+    this.barracks.style.display = show ? 'block' : 'none';
+  }
+
+  updateBarracks(canTrain: Record<string, boolean>): void {
+    for (const [id, btn] of this.barracksRows) btn.disabled = !canTrain[id];
   }
 
   setActiveButton(id: string | null): void {

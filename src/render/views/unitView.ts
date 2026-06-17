@@ -3,7 +3,7 @@
 // carried-resource chip drawn on top.
 
 import { Container, Graphics, Sprite } from 'pixi.js';
-import type { Resource } from '../../config';
+import { SOLDIERS, isSoldier, type Resource } from '../../config';
 import type { Unit } from '../../sim/world';
 import { SKIN_TONES, type UnitTextures } from '../unitTextures';
 
@@ -29,7 +29,15 @@ export function createUnitView(unit: Unit, tex: UnitTextures): UnitView {
   const container = new Container();
   const skinIndex = unit.id % SKIN_TONES.length;
   const sprite = new Sprite();
-  sprite.anchor.set(tex.anchor.x / 34, tex.anchor.y / 46); // anchor at the feet
+  // Mounted/siege units use the 110×100 canvas (anchor 55,94); everyone else the
+  // 34×46 body (anchor 17,46). Both anchor at the ground-contact point.
+  const big = isSoldier(unit.role) && SOLDIERS[unit.role].big;
+  if (big) {
+    sprite.anchor.set(55 / 110, 94 / 100);
+    sprite.scale.set(0.62);
+  } else {
+    sprite.anchor.set(tex.anchor.x / 34, tex.anchor.y / 46);
+  }
   container.addChild(sprite);
   const chip = new Graphics();
   chip.visible = false;
