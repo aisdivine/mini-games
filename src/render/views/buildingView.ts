@@ -26,6 +26,7 @@ interface LayerView {
 export interface BuildingView {
   container: Container;
   type: BuildingType;
+  base: Sprite | null; // the body sprite, for owner tinting
   layers: LayerView[];
 }
 
@@ -45,10 +46,11 @@ export function createBuildingView(
 
   const base = art.get(b.type);
   const anchor = base?.anchor ?? { x: 65, y: 92 };
+  let baseSprite: Sprite | null = null;
   if (base) {
-    const sprite = new Sprite(base.texture);
-    sprite.position.set(-anchor.x, -anchor.y);
-    container.addChild(sprite);
+    baseSprite = new Sprite(base.texture);
+    baseSprite.position.set(-anchor.x, -anchor.y);
+    container.addChild(baseSprite);
   }
 
   const layerViews: LayerView[] = [];
@@ -67,7 +69,7 @@ export function createBuildingView(
   const p = tileToScreen(b.tile.x + def.size.w / 2, b.tile.y + def.size.h / 2);
   container.position.set(p.x, p.y);
   container.zIndex = footprintDepth(b.type, b.tile);
-  return { container, type: b.type, layers: layerViews };
+  return { container, type: b.type, base: baseSprite, layers: layerViews };
 }
 
 /** Drive the building's animated overlays from the render clock + sim state.

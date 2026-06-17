@@ -18,7 +18,10 @@ function makeSim(): Sim {
 describe('production chain', () => {
   it('woodcutter produces wood via physical delivery', () => {
     const sim = makeSim();
-    sim.enqueue({ type: 'placeBuilding', building: 'woodcutter', tile: { x: 28, y: 36 } });
+    // a tree beside the woodcutter, near the central stockpile, for a tight loop
+    const t = sim.world.nextId++;
+    sim.world.trees.set(t, { id: t, tile: { x: 62, y: 52 }, wood: 9999, regrowAt: null });
+    sim.enqueue({ type: 'placeBuilding', building: 'woodcutter', tile: { x: 60, y: 53 } });
     sim.tick();
     const afterCost = sim.world.stockpile.wood;
     run(sim, 3000);

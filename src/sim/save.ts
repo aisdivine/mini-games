@@ -5,9 +5,9 @@
 import { RAID_AT_TICK, RAIDS_ENABLED, STARTING_GOLD } from '../config';
 import type { Building, Fish, Tree, Unit, World } from './world';
 
-// Bumped to 5: the world now carries a terrain layer + fish shoals, and the
-// map dimensions changed — old saves can't be loaded into the new grid.
-const SAVE_VERSION = 5;
+// Bumped to 6: the map grew to 128×128 and the world gained enemy villages /
+// ownership — old saves can't be loaded into the new grid.
+const SAVE_VERSION = 6;
 
 interface SaveFile {
   version: number;

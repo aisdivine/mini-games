@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Sim } from '../src/sim/sim';
 import { canPlace } from '../src/sim/grid';
+import { buildingAt } from '../src/sim/world';
 import { BUILDINGS, MAP_W, MAP_H } from '../src/config';
 
 describe('building placement', () => {
@@ -21,7 +22,8 @@ describe('building placement', () => {
     sim.enqueue({ type: 'placeBuilding', building: 'house', tile: { x: 5, y: 5 } });
     sim.tick();
     expect(sim.world.stockpile.wood).toBe(woodBefore - BUILDINGS.house.costWood);
-    const house = [...sim.world.buildings.values()].find((b) => b.type === 'house')!;
+    const house = buildingAt(sim.world, 5, 5)!; // the one we just placed (not an enemy hut)
+    expect(house.type).toBe('house');
     sim.enqueue({ type: 'demolish', buildingId: house.id });
     sim.tick();
     expect(sim.world.buildings.has(house.id)).toBe(false);
@@ -37,7 +39,7 @@ describe('building placement', () => {
     sim.tick();
     const events = sim.drainEvents();
     expect(events.some((e) => e.type === 'rejected')).toBe(true);
-    expect([...sim.world.buildings.values()].some((b) => b.type === 'house')).toBe(false);
+    expect(buildingAt(sim.world, 5, 5)).toBeNull(); // nothing built at the spot
   });
 
   it('cannot demolish the keep', () => {

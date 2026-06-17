@@ -158,8 +158,15 @@ export class Hud {
     this.barracks.style.display = show ? 'block' : 'none';
   }
 
-  updateBarracks(canTrain: Record<string, boolean>): void {
-    for (const [id, btn] of this.barracksRows) btn.disabled = !canTrain[id];
+  /** status per soldier: 'ok' = trainable, 'poor' = can't afford, 'locked' =
+   *  needs a conquest to unlock. */
+  updateBarracks(status: Record<string, 'ok' | 'poor' | 'locked'>): void {
+    for (const [id, btn] of this.barracksRows) {
+      const s = status[id] ?? 'poor';
+      btn.disabled = s !== 'ok';
+      const label = s === 'locked' ? '🔒' : 'Train';
+      if (btn.textContent !== label) btn.textContent = label;
+    }
   }
 
   setActiveButton(id: string | null): void {

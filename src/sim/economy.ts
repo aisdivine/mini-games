@@ -57,7 +57,7 @@ export function resourceCount(world: World, resource: Resource): number {
 
 export function findDepot(world: World, dest: 'stockpile' | 'granary'): Building | null {
   for (const b of world.buildings.values()) {
-    if (b.type === dest) return b;
+    if (b.type === dest && b.owner === 'player') return b; // never an enemy depot
   }
   return null;
 }

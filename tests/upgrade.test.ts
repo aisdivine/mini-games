@@ -67,10 +67,11 @@ describe('building upgrades', () => {
       sim.world.nextEatTick = Number.MAX_SAFE_INTEGER;
       sim.world.nextImmigrationTick = Number.MAX_SAFE_INTEGER;
       sim.world.stockpile.wood = 1000;
-      // a tree right next to the woodcutter for a tight, comparable loop
+      // a tree right next to the woodcutter, near the central stockpile, for a
+      // tight comparable loop (so craft time — not walk distance — dominates)
       const t = sim.world.nextId++;
-      sim.world.trees.set(t, { id: t, tile: { x: 31, y: 38 }, wood: 9999, regrowAt: null });
-      sim.enqueue({ type: 'placeBuilding', building: 'woodcutter', tile: { x: 28, y: 36 } });
+      sim.world.trees.set(t, { id: t, tile: { x: 62, y: 52 }, wood: 9999, regrowAt: null });
+      sim.enqueue({ type: 'placeBuilding', building: 'woodcutter', tile: { x: 60, y: 53 } });
       sim.tick();
       const b = [...sim.world.buildings.values()].find((x) => x.type === 'woodcutter')!;
       for (let i = 1; i < level; i++) {

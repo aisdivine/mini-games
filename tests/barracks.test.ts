@@ -10,6 +10,7 @@ function run(sim: Sim, ticks: number): void {
   }
 }
 function placeBarracks(sim: Sim): void {
+  sim.world.unlocked = ['knight', 'crossbowman', 'camel_lancer', 'mangonel']; // ungate elites for tests
   sim.enqueue({ type: 'placeBuilding', building: 'barracks', tile: { x: 5, y: 5 } });
   sim.tick();
 }
@@ -68,11 +69,13 @@ describe('barracks & soldiers', () => {
     sim.tick();
     const knight = soldiers(sim, 'knight')[0];
     expect(knight).toBeTruthy();
-    // drop a raider right next to the knight
+    // a lone (non-village) raider right next to the knight
+    const loose = (): Unit[] =>
+      [...sim.world.units.values()].filter((u) => u.role === 'raider' && !u.home);
     spawnUnit(sim.world, 'raider', { x: knight.pos.x + 1, y: knight.pos.y }, RAIDER_HP);
-    expect(soldiers(sim, 'raider').length).toBe(1);
+    expect(loose().length).toBe(1);
     run(sim, 500);
-    expect(soldiers(sim, 'raider').length).toBe(0); // raider defeated
+    expect(loose().length).toBe(0); // raider defeated
     expect(soldiers(sim, 'knight').length).toBe(1); // knight survives
   });
 });

@@ -48,6 +48,7 @@ function consumeFood(world: World, need: number): void {
 export function housingCapacity(world: World): number {
   let cap = 0;
   for (const b of world.buildings.values()) {
+    if (b.owner !== 'player') continue; // enemy village houses don't house your people
     cap += BUILDINGS[b.type].housing ?? 0;
   }
   return cap;

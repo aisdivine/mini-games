@@ -8,6 +8,7 @@ import {
   AURA_DAMAGE_MULT,
   AURA_RADIUS,
   BUILDINGS,
+  GUARD_AGGRO,
   HEAL_AMOUNT,
   isSoldier,
   MANGONEL_SPLASH,
@@ -16,7 +17,10 @@ import {
   RAIDER_COUNT,
   RAIDER_DAMAGE,
   RAIDER_HP,
+  SOLDIER_AGGRO,
   SOLDIERS,
+  VILLAGE_INCOME_INTERVAL,
+  VILLAGE_TYPES,
   type SoldierDef,
   type SoldierType,
 } from '../config';
@@ -46,7 +50,7 @@ export function updateCombat(world: World, events: SimEvent[]): void {
   for (const unit of world.units.values()) {
     if (isSoldier(unit.role)) updateSoldier(world, unit, events);
     else if (unit.role === 'raider') {
-      raidersAlive++;
+      if (!unit.home) raidersAlive++; // village guards aren't part of a raid wave
       updateRaider(world, unit, events);
     }
   }
@@ -56,12 +60,47 @@ export function updateCombat(world: World, events: SimEvent[]): void {
     if (unit.hp <= 0) {
       world.units.delete(unit.id);
       events.push({ type: 'unitDied', id: unit.id, role: unit.role });
-      if (unit.role === 'raider') raidersAlive--;
+      if (unit.role === 'raider' && !unit.home) raidersAlive--;
     }
   }
 
+  checkCaptures(world, events);
+  payIncome(world);
+
   if (world.raid.spawnedCount > 0 && raidersAlive === 0 && world.outcome === 'playing') {
     setOutcome(world, 'won', 'The raid is defeated — your city stands!', events);
+  }
+}
+
+// A village is captured once every one of its defenders is dead. Its buildings
+// flip to you, the elite unit it guards unlocks, and its income starts.
+function checkCaptures(world: World, events: SimEvent[]): void {
+  for (const v of world.villages) {
+    if (v.captured) continue;
+    if (v.defenderIds.some((id) => world.units.has(id))) continue;
+    v.captured = true;
+    for (const id of v.buildingIds) {
+      const b = world.buildings.get(id);
+      if (b) b.owner = 'player';
+    }
+    const type = VILLAGE_TYPES.find((t) => t.key === v.typeKey)!;
+    if (!world.unlocked.includes(type.unlock)) world.unlocked.push(type.unlock);
+    events.push({
+      type: 'message',
+      text: `🏳 Captured ${type.label}! +${type.income.amount} ${type.income.resource}/10s · unlocked ${type.unlock.replace('_', ' ')}`,
+    });
+  }
+}
+
+// Passive income from captured villages, paid on an interval.
+function payIncome(world: World): void {
+  if (world.tick % VILLAGE_INCOME_INTERVAL !== 0) return;
+  for (const v of world.villages) {
+    if (!v.captured) continue;
+    const inc = VILLAGE_TYPES.find((t) => t.key === v.typeKey)!.income;
+    if (inc.resource === 'gold') world.gold += inc.amount;
+    else if (inc.resource === 'food') world.granaryFood.bread += inc.amount;
+    else world.stockpile[inc.resource] += inc.amount;
   }
 }
 
@@ -144,7 +183,9 @@ function updateSoldier(world: World, unit: Unit, events: SimEvent[]): void {
     return;
   }
   const target = nearestRaider(world, unit);
-  if (!target) return; // no enemies — hold position
+  // Hold position unless an enemy is close — so idle troops don't wander off to
+  // distant villages; march them in to provoke the guards.
+  if (!target || dist2(unit, target) > SOLDIER_AGGRO) return;
   const ranged = def.range > 1.9;
   const range = def.range + (ranged && nearTower(world, unit) ? ARCHER_TOWER_RANGE_BONUS : 0);
   if (dist2(unit, target) <= range) {
@@ -191,7 +232,35 @@ function nearTower(world: World, archer: Unit): boolean {
 // Raiders
 // ---------------------------------------------------------------------------
 
+// Village defender: hold near home; chase + hit intruders within aggro of home;
+// drift back otherwise. Never marches on the keep.
+function guardPost(world: World, raider: Unit): void {
+  const home = raider.home!;
+  const foe = nearestSoldier(world, raider);
+  if (foe && Math.hypot(foe.pos.x - home.x, foe.pos.y - home.y) <= GUARD_AGGRO) {
+    if (dist2(raider, foe) <= 1.7) {
+      raider.path = null;
+      if (raider.attackCooldown === 0) {
+        raider.attackCooldown = RAIDER_COOLDOWN_TICKS;
+        foe.hp -= RAIDER_DAMAGE;
+      }
+    } else {
+      moveToward(world, raider, foe.pos);
+    }
+    return;
+  }
+  if (Math.hypot(raider.pos.x - home.x, raider.pos.y - home.y) > 1.6) {
+    moveToward(world, raider, home);
+  }
+}
+
 function updateRaider(world: World, raider: Unit, events: SimEvent[]): void {
+  // Village guards hold their post and only engage intruders near home.
+  if (raider.home) {
+    guardPost(world, raider);
+    return;
+  }
+
   // Fight back: if a defending soldier is right next to us, hack at it instead
   // of marching on. (Soldiers close in via their own auto-engage.)
   const foe = nearestSoldier(world, raider);

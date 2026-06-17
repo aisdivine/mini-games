@@ -4,8 +4,8 @@
 
 export const TILE_W = 64;
 export const TILE_H = 32;
-export const MAP_W = 96;
-export const MAP_H = 96;
+export const MAP_W = 128;
+export const MAP_H = 128;
 
 // ---------------------------------------------------------------------------
 // Terrain — a per-tile land type layer underneath occupancy. Grass is the only
@@ -272,6 +272,34 @@ export const SOLDIERS: Record<SoldierType, SoldierDef> = {
 export function isSoldier(role: string): role is SoldierType {
   return Object.prototype.hasOwnProperty.call(SOLDIERS, role);
 }
+
+// ---------------------------------------------------------------------------
+// Enemy villages — scattered settlements you conquer by killing all their
+// defenders. On capture the buildings flip to you, their land opens for
+// building, you earn a passive income, and you unlock an elite soldier.
+// ---------------------------------------------------------------------------
+
+export interface VillageType {
+  key: string;
+  label: string;
+  income: { resource: 'gold' | 'wood' | 'stone' | 'food'; amount: number };
+  unlock: SoldierType; // elite unit unlocked on capture
+  defenders: number; // guard count
+}
+
+export const VILLAGE_TYPES: VillageType[] = [
+  { key: 'trade', label: 'Trade Post', income: { resource: 'gold', amount: 6 }, unlock: 'crossbowman', defenders: 3 },
+  { key: 'granary', label: 'Granary Village', income: { resource: 'food', amount: 6 }, unlock: 'knight', defenders: 4 },
+  { key: 'lumber', label: 'Lumber Camp', income: { resource: 'wood', amount: 8 }, unlock: 'camel_lancer', defenders: 3 },
+  { key: 'quarry', label: 'Quarry Town', income: { resource: 'stone', amount: 5 }, unlock: 'mangonel', defenders: 4 },
+];
+
+// Elite soldiers start locked; conquering the matching village unlocks them.
+export const ELITE_SOLDIERS: SoldierType[] = ['knight', 'crossbowman', 'camel_lancer', 'mangonel'];
+export const VILLAGE_RADIUS = 6; // no-build zone around an enemy village center
+export const VILLAGE_INCOME_INTERVAL = 200; // ticks (10s) between income payouts
+export const GUARD_AGGRO = 8; // tiles; defenders engage intruders within this of home
+export const SOLDIER_AGGRO = 9; // tiles; your idle soldiers auto-engage enemies within this
 
 export const HEAL_AMOUNT = 8; // hp a medic restores per heal tick
 export const AURA_RADIUS = 5; // tiles; standard-bearer damage buff range

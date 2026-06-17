@@ -224,6 +224,7 @@ export class SceneSync {
         this.buildingViews.set(id, view);
         this.entityLayer.addChild(view.container);
       }
+      if (view.base) view.base.tint = b.owner === 'enemy' ? 0xff7a6a : 0xffffff;
       animateBuilding(view, b, this.clock, this.night);
     }
     for (const [id, view] of this.buildingViews) {

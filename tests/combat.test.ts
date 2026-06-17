@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { Sim } from '../src/sim/sim';
+import { removeBuilding } from '../src/sim/world';
 import { MAP_H, RAID_AT_TICK } from '../src/config';
 
+// Only count raid raiders (village guards have a home and stay put).
 function raiderCount(sim: Sim): number {
-  return [...sim.world.units.values()].filter((u) => u.role === 'raider').length;
+  return [...sim.world.units.values()].filter((u) => u.role === 'raider' && !u.home).length;
 }
 
 function run(sim: Sim, ticks: number): void {
@@ -13,10 +15,23 @@ function run(sim: Sim, ticks: number): void {
   }
 }
 
+/** Remove enemy villages so combat tests run on a clean field. */
+function clearVillages(sim: Sim): void {
+  for (const v of sim.world.villages) {
+    for (const id of [...v.buildingIds]) {
+      const b = sim.world.buildings.get(id);
+      if (b) removeBuilding(sim.world, b);
+    }
+    for (const id of v.defenderIds) sim.world.units.delete(id);
+  }
+  sim.world.villages = [];
+}
+
 function makeSim(): Sim {
   const sim = new Sim(3);
   sim.world.granaryFood.bread = 100000; // keep popularity out of the picture
   sim.world.nextImmigrationTick = Number.MAX_SAFE_INTEGER;
+  clearVillages(sim);
   return sim;
 }
 
@@ -74,9 +89,11 @@ describe('combat', () => {
   it('walled-out raiders attack walls instead of freezing', () => {
     const sim = makeSim();
     sim.world.stockpile.wood = 10000;
-    // vertical wall sealing the east approach... full column
+    sim.world.terrain.fill(0); // flatten so the test column is unobstructed
+    // vertical wall east of the keep, sealing the raiders' approach from the
+    // east edge. (Keep ≈ x59-61, stockpile ≈ x66-68, so x=72 is clear.)
     const tiles = [];
-    for (let y = 0; y < MAP_H; y++) tiles.push({ x: 46, y });
+    for (let y = 0; y < MAP_H; y++) tiles.push({ x: 72, y });
     sim.enqueue({ type: 'placeWalls', tiles });
     sim.tick();
     const wallCount = [...sim.world.buildings.values()].filter((b) => b.type === 'wall').length;

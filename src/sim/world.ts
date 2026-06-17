@@ -10,6 +10,7 @@ import {
   MAP_H,
   POPULARITY_START,
   RAID_AT_TICK,
+  RAIDER_HP,
   RAIDS_ENABLED,
   STARTING_GOLD,
   STARTING_PEASANTS,
@@ -18,6 +19,7 @@ import {
   T_ROCK,
   T_WATER,
   TREE_CLEAR_RADIUS,
+  VILLAGE_TYPES,
   TREE_CLUSTERS,
   TREE_PER_CLUSTER,
   TREE_WOOD,
@@ -43,9 +45,12 @@ export type ProductionState =
   | { kind: 'producing'; ticksLeft: number }
   | { kind: 'delivering' };
 
+export type Owner = 'player' | 'enemy';
+
 export interface Building {
   id: number;
   type: BuildingType;
+  owner: Owner;
   /** North (min-x, min-y) corner of the footprint. */
   tile: Vec2;
   /** Tile just outside the footprint where workers enter/exit. */
@@ -92,6 +97,18 @@ export interface Unit {
   hp: number;
   attackCooldown: number;
   targetId: number | null; // combat target (building id)
+  /** Village-defender guard post; null for everyone else. Guards hold here and
+   *  only engage intruders nearby instead of marching on the keep. */
+  home: Vec2 | null;
+}
+
+export interface Village {
+  id: number;
+  typeKey: string; // VILLAGE_TYPES key
+  center: Vec2;
+  captured: boolean;
+  buildingIds: number[];
+  defenderIds: number[];
 }
 
 export interface Reservation {
@@ -132,6 +149,8 @@ export interface World {
   units: Map<number, Unit>;
   trees: Map<number, Tree>;
   fish: Map<number, Fish>;
+  villages: Village[];
+  unlocked: string[]; // elite SoldierTypes unlocked by conquest
   stockpile: Record<StockResource, number>;
   granaryFood: Record<FoodType, number>;
   gold: number;
@@ -164,6 +183,8 @@ export function createWorld(seed: number): World {
     units: new Map(),
     trees: new Map(),
     fish: new Map(),
+    villages: [],
+    unlocked: [],
     stockpile: { wood: STARTING_WOOD, wheat: 0, flour: 0, stone: 0 },
     granaryFood: { bread: 8, apples: 6, meat: 0, fish: 0 },
     gold: STARTING_GOLD,
@@ -196,8 +217,87 @@ export function createWorld(seed: number): World {
   }
 
   generateTerrain(world, cx, cy);
+  generateVillages(world, cx, cy);
   scatterTrees(world, cx, cy);
   return world;
+}
+
+// ---------------------------------------------------------------------------
+// Enemy villages: a handful of settlements (intact buildings + guards) out on
+// the frontier, away from the start and the open west band. Conquer them by
+// killing every guard (see combat.ts).
+// ---------------------------------------------------------------------------
+
+function clearTile(world: World, x: number, y: number): void {
+  if (x >= 0 && y >= 0 && x < MAP_W && y < MAP_H) world.terrain[idx(x, y)] = T_GRASS;
+}
+
+function generateVillages(world: World, cx: number, cy: number): void {
+  const placed: Vec2[] = [];
+  for (const type of VILLAGE_TYPES) {
+    let v: Vec2 | null = null;
+    for (let tries = 0; tries < 80; tries++) {
+      // Eastern frontier only: clear of the start ring and the open west half
+      // (which the headless tests build into).
+      const x = 60 + nextInt(world, MAP_W - 72);
+      const y = 12 + nextInt(world, MAP_H - 24);
+      if (Math.hypot(x - cx, y - cy) < 28) continue; // keep clear of the start
+      if (world.terrain[idx(x, y)] !== T_GRASS) continue; // not in pond/mountain
+      if (placed.some((p) => Math.hypot(p.x - x, p.y - y) < 20)) continue;
+      v = { x, y };
+      break;
+    }
+    if (!v) continue;
+    placed.push(v);
+
+    // clear a patch of grass so the buildings + guards have room
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) clearTile(world, v.x + dx, v.y + dy);
+
+    const village: Village = {
+      id: world.nextId++,
+      typeKey: type.key,
+      center: { ...v },
+      captured: false,
+      buildingIds: [],
+      defenderIds: [],
+    };
+    // a center (granary) + two huts, all enemy-owned
+    const layout: { type: BuildingType; dx: number; dy: number }[] = [
+      { type: 'granary', dx: 0, dy: 0 },
+      { type: 'house', dx: -3, dy: 1 },
+      { type: 'house', dx: 3, dy: -1 },
+    ];
+    for (const b of layout) {
+      const tile = { x: v.x + b.dx, y: v.y + b.dy };
+      if (!inFree(world, b.type, tile)) continue;
+      const built = placeBuildingRaw(world, b.type, tile, 'enemy');
+      village.buildingIds.push(built.id);
+    }
+    // guards spawn around the center, leashed to it
+    for (let i = 0; i < type.defenders; i++) {
+      const gx = v.x + (nextInt(world, 5) - 2);
+      const gy = v.y + 2 + (nextInt(world, 3) - 1);
+      const guard = spawnUnit(world, 'raider', { x: gx, y: gy }, RAIDER_HP);
+      guard.home = { ...v };
+      village.defenderIds.push(guard.id);
+    }
+    world.villages.push(village);
+  }
+}
+
+/** All footprint tiles in bounds, free, and on grass. */
+function inFree(world: World, type: BuildingType, tile: Vec2): boolean {
+  const def = BUILDINGS[type];
+  for (let dy = 0; dy < def.size.h; dy++) {
+    for (let dx = 0; dx < def.size.w; dx++) {
+      const x = tile.x + dx;
+      const y = tile.y + dy;
+      if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return false;
+      const i = idx(x, y);
+      if (world.occupancy[i] !== 0 || world.terrain[i] !== T_GRASS) return false;
+    }
+  }
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -377,11 +477,12 @@ export function findNearestTree(world: World, from: Vec2): Tree | null {
 }
 
 /** Place without validation/cost — callers validate first. Bumps gridVersion. */
-export function placeBuildingRaw(world: World, type: BuildingType, tile: Vec2): Building {
+export function placeBuildingRaw(world: World, type: BuildingType, tile: Vec2, owner: Owner = 'player'): Building {
   const def = BUILDINGS[type];
   const building: Building = {
     id: world.nextId++,
     type,
+    owner,
     tile: { ...tile },
     accessTile: { x: tile.x + def.size.w, y: tile.y + def.size.h - 1 },
     hp: def.hp,
@@ -442,6 +543,7 @@ export function spawnUnit(world: World, role: UnitRole, pos: Vec2, hp: number): 
     hp,
     attackCooldown: 0,
     targetId: null,
+    home: null,
   };
   world.units.set(unit.id, unit);
   return unit;

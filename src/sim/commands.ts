@@ -7,6 +7,7 @@ import {
   ARCHER_HP,
   BUILDINGS,
   DEMOLISH_REFUND,
+  ELITE_SOLDIERS,
   FOOD_TYPES,
   isSoldier,
   MARKET_GOODS,
@@ -151,6 +152,10 @@ export function applyCommand(world: World, cmd: Command, events: SimEvent[]): vo
       const barracks = [...world.buildings.values()].find((b) => b.type === 'barracks');
       if (!barracks) {
         events.push({ type: 'rejected', reason: 'Build a Barracks to train soldiers' });
+        return;
+      }
+      if (ELITE_SOLDIERS.includes(cmd.soldier) && !world.unlocked.includes(cmd.soldier)) {
+        events.push({ type: 'rejected', reason: `${def.label} is locked — conquer its village to unlock` });
         return;
       }
       if (!canAfford(world, def.cost)) {

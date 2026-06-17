@@ -5,6 +5,7 @@ import {
   BUILDINGS,
   EDGE_PAN_MARGIN,
   EDGE_PAN_SPEED,
+  ELITE_SOLDIERS,
   isSoldier,
   MARKET_GOODS,
   MAX_BUILDING_LEVEL,
@@ -725,6 +726,9 @@ async function start(): Promise<void> {
         `<span class="stat"${t('Gold — earned by selling at the Market, spent buying goods or training soldiers.')}>🪙 ${w.gold}</span>`,
         `<span class="stat"${t('Population / housing capacity. Build Houses to raise the cap.')}>👥 ${pop}/${housing}</span>`,
         `<span class="stat"${t('Popularity — rises when peasants are fed (varied diet helps), falls when they starve. 0 = you lose.')}>❤️ ${w.popularity} (food ${w.lastFoodDelta >= 0 ? '+' : ''}${w.lastFoodDelta})</span>`,
+        w.villages.length
+          ? `<span class="stat"${t('Enemy villages conquered. March soldiers in and defeat the defenders to capture one — it flips to you, opens its land, gives passive income, and unlocks an elite unit.')}>🏳 ${w.villages.filter((v) => v.captured).length}/${w.villages.length}</span>`
+          : '',
         raidStat,
         `<span class="stat"${t('Game speed — 1/2/3 to change, P to pause.')}>${paused ? '⏸ paused' : `▶ ${speed}×`}</span>`,
       ].join(''),
@@ -747,11 +751,12 @@ async function start(): Promise<void> {
         hud.setAction(null);
       } else if (b && b.type === 'barracks') {
         barracksOpen = true;
-        const canTrain: Record<string, boolean> = {};
+        const status: Record<string, 'ok' | 'poor' | 'locked'> = {};
         for (const id of Object.keys(SOLDIERS) as SoldierType[]) {
-          canTrain[id] = canAffordTrain(w, SOLDIERS[id].cost);
+          if (ELITE_SOLDIERS.includes(id) && !w.unlocked.includes(id)) status[id] = 'locked';
+          else status[id] = canAffordTrain(w, SOLDIERS[id].cost) ? 'ok' : 'poor';
         }
-        hud.updateBarracks(canTrain);
+        hud.updateBarracks(status);
         hud.setInfo('');
         hud.setAction(null);
       } else if (b) {
