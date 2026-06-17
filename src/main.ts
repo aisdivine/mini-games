@@ -31,7 +31,7 @@ import { tileToScreen } from './render/iso';
 import { Atmosphere } from './render/atmosphere';
 import { AmbientLife, loadAmbientLife } from './render/ambientLife';
 import { SceneSync } from './render/sceneSync';
-import { Container } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { createGroundView } from './render/views/groundView';
 import { WaterView } from './render/views/waterView';
 import { OverlayView } from './render/views/overlayView';
@@ -68,8 +68,14 @@ type Mode =
 
 type Selection =
   | { kind: 'none' }
-  | { kind: 'unit'; id: number }
+  | { kind: 'units'; ids: number[] }
   | { kind: 'building'; id: number };
+
+/** Units the player can box-select and command (military). Workers are excluded
+ *  so commanding them never orphans their job. Soldier roles join this later. */
+function isCommandable(u: Unit): boolean {
+  return u.role === 'archer';
+}
 
 const BUILD_ORDER: BuildingType[] = [
   'house', 'granary', 'appleOrchard', 'hunter', 'fishery', 'woodcutter', 'quarry', 'wheatFarm', 'mill', 'bakery', 'market', 'tower',
@@ -121,6 +127,9 @@ async function start(): Promise<void> {
   // otherwise — and always on desktop — it's daytime. 'n' overrides for the run.
   const atmosphere = new Atmosphere();
   app.stage.addChild(atmosphere.g);
+  // Selection-box marquee, drawn in screen space on top of everything.
+  const marquee = new Graphics();
+  app.stage.addChild(marquee);
   const isMobile =
     window.matchMedia?.('(pointer: coarse)').matches ||
     /Android|iPhone|iPad|iPod|Mobile|Silk/i.test(navigator.userAgent) ||
@@ -273,12 +282,34 @@ async function start(): Promise<void> {
     return best;
   }
 
+  /** Order every commandable unit in the current selection to `tile`, spread
+   *  over a small grid so they don't all stack on one square. */
+  function moveSelectedTo(tile: Vec2): void {
+    if (selection.kind !== 'units') return;
+    const movable = selection.ids
+      .map((id) => sim.world.units.get(id))
+      .filter((u): u is Unit => !!u && isCommandable(u));
+    const cols = Math.max(1, Math.ceil(Math.sqrt(movable.length)));
+    movable.forEach((u, i) => {
+      const dx = (i % cols) - (cols >> 1);
+      const dy = Math.floor(i / cols) - (cols >> 1);
+      let dest = { x: tile.x + dx, y: tile.y + dy };
+      if (!isPassable(sim.world, dest.x, dest.y)) dest = tile;
+      sim.enqueue({ type: 'moveUnit', unitId: u.id, dest });
+    });
+  }
+
   setupPointer(app, layers.world, camera, {
     onHoverTile(tile) {
       hovered = tile;
     },
     onClickTile(tile, frac, button) {
+      // Right-click: command the selected soldiers to move there, else cancel.
       if (button === 2) {
+        if (mode.kind === 'select' && selection.kind === 'units' && isPassable(sim.world, tile.x, tile.y)) {
+          moveSelectedTo(tile);
+          return;
+        }
         setMode({ kind: 'select' });
         selection = { kind: 'none' };
         return;
@@ -298,7 +329,7 @@ async function start(): Promise<void> {
         case 'select': {
           const unit = pickUnit(frac);
           if (unit) {
-            selection = { kind: 'unit', id: unit.id };
+            selection = { kind: 'units', ids: [unit.id] };
             return;
           }
           const building = buildingAt(sim.world, tile.x, tile.y);
@@ -306,18 +337,31 @@ async function start(): Promise<void> {
             selection = { kind: 'building', id: building.id };
             return;
           }
-          // empty ground: order the selected archer around
-          if (selection.kind === 'unit') {
-            const sel = sim.world.units.get(selection.id);
-            if (sel?.role === 'archer' && isPassable(sim.world, tile.x, tile.y)) {
-              sim.enqueue({ type: 'moveUnit', unitId: sel.id, dest: tile });
-              return;
-            }
-          }
           selection = { kind: 'none' };
           return;
         }
       }
+    },
+    isSelectMode: () => mode.kind === 'select',
+    onBoxMove(x0, y0, x1, y1) {
+      marquee.clear();
+      marquee
+        .rect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0))
+        .fill({ color: 0x7fd4ff, alpha: 0.12 })
+        .stroke({ width: 1.5, color: 0x7fd4ff, alpha: 0.9 });
+    },
+    onBoxEnd(x0, y0, x1, y1, commit) {
+      marquee.clear();
+      if (!commit) return;
+      const minX = Math.min(x0, x1), maxX = Math.max(x0, x1);
+      const minY = Math.min(y0, y1), maxY = Math.max(y0, y1);
+      const ids: number[] = [];
+      for (const u of sim.world.units.values()) {
+        if (u.insideBuilding || !isCommandable(u)) continue;
+        const sp = layers.world.toGlobal(tileToScreen(u.pos.x, u.pos.y));
+        if (sp.x >= minX && sp.x <= maxX && sp.y >= minY && sp.y <= maxY) ids.push(u.id);
+      }
+      selection = ids.length ? { kind: 'units', ids } : { kind: 'none' };
     },
     isPaintMode: () => mode.kind === 'wall',
     onPaintStart(tile) {
@@ -521,17 +565,28 @@ async function start(): Promise<void> {
       overlay.setWallPreview(preview, (t) => canPlace(sim.world, BUILDINGS.wall, t));
     }
 
-    // Selection ring follows the selected entity; drop selection if it died.
-    if (selection.kind === 'unit') {
-      const u = sim.world.units.get(selection.id);
-      if (!u) selection = { kind: 'none' };
-      else overlay.setSelection(u.insideBuilding ? null : u.pos);
+    // Selection rings follow the selected units; drop any that died/left.
+    if (selection.kind === 'units') {
+      const positions: Vec2[] = [];
+      const alive: number[] = [];
+      for (const id of selection.ids) {
+        const u = sim.world.units.get(id);
+        if (!u) continue;
+        alive.push(id);
+        if (!u.insideBuilding) positions.push(u.pos);
+      }
+      selection = alive.length ? { kind: 'units', ids: alive } : { kind: 'none' };
+      overlay.setUnitSelections(positions);
     } else if (selection.kind === 'building') {
       const b = sim.world.buildings.get(selection.id);
-      if (!b) selection = { kind: 'none' };
-      else overlay.setSelectedBuilding(b.type, b.tile);
+      if (!b) {
+        selection = { kind: 'none' };
+        overlay.setUnitSelections([]); // clear the shared selection graphic
+      } else {
+        overlay.setSelectedBuilding(b.type, b.tile);
+      }
     } else {
-      overlay.setSelection(null);
+      overlay.setUnitSelections([]);
     }
 
     overlay.drawPaths(sim.world);
@@ -651,15 +706,20 @@ async function start(): Promise<void> {
           hud.setAction(null);
         }
       }
-    } else if (selection.kind === 'unit') {
-      const u = sim.world.units.get(selection.id);
-      if (u) {
-        hud.setInfo(
-          `<h3>${u.role}</h3>` +
-            `Task: ${u.task.kind}<br>` +
-            (u.carrying ? `Carrying ${u.carrying.resource}` : '') +
-            (u.role === 'archer' ? '<br><em>Click ground to move</em>' : ''),
-        );
+    } else if (selection.kind === 'units') {
+      if (selection.ids.length === 1) {
+        const u = sim.world.units.get(selection.ids[0]);
+        if (u) {
+          hud.setInfo(
+            `<h3>${u.role}</h3>` +
+              `Task: ${u.task.kind}<br>` +
+              (u.carrying ? `Carrying ${u.carrying.resource}` : '') +
+              (isCommandable(u) ? '<br><em>Right-click ground to move</em>' : ''),
+          );
+        }
+      } else {
+        const n = selection.ids.length;
+        hud.setInfo(`<h3>${n} units selected</h3><em>Right-click ground to move them</em>`);
       }
       hud.setAction(null);
     } else {

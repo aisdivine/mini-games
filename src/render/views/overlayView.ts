@@ -62,11 +62,13 @@ export class OverlayView {
     }
   }
 
-  setSelection(pos: Vec2 | null): void {
+  /** Ring under each selected unit (one or many). */
+  setUnitSelections(positions: Vec2[]): void {
     this.selection.clear();
-    if (!pos) return;
-    const p = tileToScreen(pos.x, pos.y);
-    this.selection.ellipse(p.x, p.y + 2, 12, 6).stroke({ width: 2, color: 0x7fd4ff });
+    for (const pos of positions) {
+      const p = tileToScreen(pos.x, pos.y);
+      this.selection.ellipse(p.x, p.y + 2, 12, 6).stroke({ width: 2, color: 0x7fd4ff });
+    }
   }
 
   /** Highlight a selected building's footprint. */

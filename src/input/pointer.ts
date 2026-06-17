@@ -7,18 +7,25 @@ export interface PointerCallbacks {
   onHoverTile(tile: Vec2 | null): void;
   /** frac is the fractional tile position of the click (for unit picking). */
   onClickTile(tile: Vec2, frac: Vec2, button: number): void;
-  /** When true, left-drag paints (wall drawing) instead of panning. */
+  /** When true, left-drag paints (wall drawing). */
   isPaintMode(): boolean;
   onPaintStart(tile: Vec2): void;
   onPaintMove(tile: Vec2): void;
   onPaintEnd(tile: Vec2): void;
+  /** When true, a mouse left-drag draws a selection box instead of doing nothing. */
+  isSelectMode(): boolean;
+  /** Drag-box (screen px). onBoxEnd's commit=false means cancelled (just clear). */
+  onBoxMove(x0: number, y0: number, x1: number, y1: number): void;
+  onBoxEnd(x0: number, y0: number, x1: number, y1: number, commit: boolean): void;
 }
 
-// Any drag beyond this many screen px is a pan, not a click/tap.
+// Any drag beyond this many screen px is a drag (pan/box), not a click/tap.
 const DRAG_THRESHOLD = 8;
 
-// One unified pointer pipeline drives mouse AND touch (Pixi normalizes both to
-// pointer events). Single pointer = pan / tap / paint; two pointers = pinch zoom.
+// Unified pointer pipeline for mouse AND touch (Pixi normalizes both):
+//  • touch one-finger / mouse right-button drag → pan; two fingers → pinch zoom
+//  • mouse left-drag in select mode → selection box
+//  • tap / click → select / place / command
 export function setupPointer(
   app: Application,
   worldLayer: Container,
@@ -32,6 +39,10 @@ export function setupPointer(
   let down = false;
   let dragging = false;
   let painting = false;
+  let boxing = false;
+  let boxMoved = false;
+  let downButton = 0;
+  let downMouse = false;
   let downAt = { x: 0, y: 0 };
   let last = { x: 0, y: 0 };
   let lastPaintTile: Vec2 | null = null;
@@ -52,20 +63,30 @@ export function setupPointer(
     down = false;
     dragging = false;
     painting = false;
+    boxing = false;
+    boxMoved = false;
     lastPaintTile = null;
+  }
+
+  // Pan only on touch (any finger) or mouse right-button; mouse-left is for
+  // box-select / placing, never panning.
+  function panEligible(): boolean {
+    return !downMouse || downButton === 2;
   }
 
   app.stage.on('pointerdown', (e: FederatedPointerEvent) => {
     pts.set(e.pointerId, { x: e.global.x, y: e.global.y });
     down = true;
     dragging = false;
+    downButton = e.button;
+    downMouse = e.pointerType === 'mouse';
     downAt = { x: e.global.x, y: e.global.y };
     last = { ...downAt };
 
     if (pts.size >= 2) {
-      // entering a pinch: cancel any in-progress paint, start measuring
       wasMulti = true;
       painting = false;
+      boxing = false;
       pinchDist = pinchMetrics().dist;
       return;
     }
@@ -76,13 +97,15 @@ export function setupPointer(
         lastPaintTile = tile;
         cb.onPaintStart(tile);
       }
+    } else if (downMouse && e.button === 0 && cb.isSelectMode()) {
+      boxing = true;
+      boxMoved = false;
     }
   });
 
   app.stage.on('pointermove', (e: FederatedPointerEvent) => {
     if (pts.has(e.pointerId)) pts.set(e.pointerId, { x: e.global.x, y: e.global.y });
 
-    // Two fingers → pinch zoom around the midpoint; it owns the whole gesture.
     if (pts.size >= 2) {
       const m = pinchMetrics();
       if (pinchDist > 0 && m.dist > 0) camera.zoomAt(m.mx, m.my, m.dist / pinchDist);
@@ -90,13 +113,18 @@ export function setupPointer(
       return;
     }
 
-    if (down && painting) {
+    if (painting) {
       const tile = pickTile(e);
       if (tile && (tile.x !== lastPaintTile?.x || tile.y !== lastPaintTile?.y)) {
         lastPaintTile = tile;
         cb.onPaintMove(tile);
       }
-    } else if (down) {
+    } else if (boxing) {
+      if (!boxMoved && Math.hypot(e.global.x - downAt.x, e.global.y - downAt.y) > DRAG_THRESHOLD) {
+        boxMoved = true;
+      }
+      if (boxMoved) cb.onBoxMove(downAt.x, downAt.y, e.global.x, e.global.y);
+    } else if (down && panEligible()) {
       if (!dragging && Math.hypot(e.global.x - downAt.x, e.global.y - downAt.y) > DRAG_THRESHOLD) {
         dragging = true;
       }
@@ -106,29 +134,29 @@ export function setupPointer(
     cb.onHoverTile(pickTile(e));
   });
 
-  // commit=true only for a genuine pointerup (eligible to register a tap).
   function release(e: FederatedPointerEvent, commit: boolean): void {
     pts.delete(e.pointerId);
 
     if (pts.size >= 1) {
-      // fingers remain — still a multi-touch gesture, don't tap/place
       pinchDist = 0;
       if (pts.size === 1) {
         const rem = pts.values().next().value!;
-        last = { x: rem.x, y: rem.y }; // resync pan origin so it doesn't jump
+        last = { x: rem.x, y: rem.y };
         downAt = { ...last };
         dragging = false;
       }
       return;
     }
 
-    // last finger up
     if (painting) {
       const tile = (commit ? pickTile(e) : null) ?? lastPaintTile;
       if (tile) cb.onPaintEnd(tile);
+    } else if (boxing && boxMoved) {
+      cb.onBoxEnd(downAt.x, downAt.y, e.global.x, e.global.y, commit);
     } else if (commit && down && !dragging && !wasMulti) {
+      // a tap/click (incl. a box that never really moved)
       const tile = pickTile(e);
-      if (tile) cb.onClickTile(tile, pickFrac(e), e.button);
+      if (tile) cb.onClickTile(tile, pickFrac(e), downButton);
     }
     wasMulti = false;
     reset();
@@ -148,7 +176,6 @@ export function setupPointer(
   );
 
   function pickFrac(e: FederatedPointerEvent): Vec2 {
-    // toLocal accounts for camera pan/zoom — never hand-roll that math.
     const local = worldLayer.toLocal(e.global);
     return screenToTile(local.x, local.y);
   }
