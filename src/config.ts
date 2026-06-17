@@ -257,13 +257,13 @@ export interface SoldierDef {
 }
 
 export const SOLDIERS: Record<SoldierType, SoldierDef> = {
-  spearman: { type: 'spearman', label: 'Spearman', hp: 70, damage: 10, range: 1.7, cooldownTicks: 18, speed: 0.12, cost: { wood: 6, food: 2 } },
+  spearman: { type: 'spearman', label: 'Spearman', hp: 70, damage: 10, range: 1.7, cooldownTicks: 18, speed: 0.12, cost: { wood: 6 } },
   manatarms: { type: 'manatarms', label: 'Man-at-Arms', hp: 110, damage: 14, range: 1.7, cooldownTicks: 20, speed: 0.11, cost: { wood: 8, gold: 6 } },
   pikeman: { type: 'pikeman', label: 'Pikeman', hp: 95, damage: 12, range: 2.4, cooldownTicks: 24, speed: 0.1, cost: { wood: 8, stone: 2 } },
   knight: { type: 'knight', label: 'Knight', hp: 200, damage: 22, range: 1.7, cooldownTicks: 22, speed: 0.12, cost: { gold: 20, stone: 6 } },
   archer: { type: 'archer', label: 'Archer', hp: 60, damage: 12, range: 6, cooldownTicks: 20, speed: 0.12, cost: { wood: 5 } },
   crossbowman: { type: 'crossbowman', label: 'Crossbowman', hp: 70, damage: 20, range: 7, cooldownTicks: 40, speed: 0.1, cost: { wood: 6, stone: 2 } },
-  camel_lancer: { type: 'camel_lancer', label: 'Camel Lancer', hp: 90, damage: 18, range: 1.8, cooldownTicks: 18, speed: 0.22, cost: { gold: 16, food: 3 }, big: true },
+  camel_lancer: { type: 'camel_lancer', label: 'Camel Lancer', hp: 90, damage: 18, range: 1.8, cooldownTicks: 18, speed: 0.22, cost: { gold: 18 }, big: true },
   mangonel: { type: 'mangonel', label: 'Mangonel', hp: 80, damage: 24, range: 8, cooldownTicks: 70, speed: 0.05, cost: { wood: 14, stone: 10 }, special: 'splash', big: true },
   medic: { type: 'medic', label: 'Field Medic', hp: 60, damage: 0, range: 1.7, cooldownTicks: 30, speed: 0.13, cost: { gold: 10 }, special: 'heal' },
   standard_bearer: { type: 'standard_bearer', label: 'Standard-Bearer', hp: 90, damage: 8, range: 1.7, cooldownTicks: 24, speed: 0.12, cost: { gold: 12 }, special: 'aura' },

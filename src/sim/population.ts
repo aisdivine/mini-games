@@ -16,10 +16,12 @@ import type { SimEvent } from './events';
 import { spawnUnit, unbindFromWorkplace, type Unit, type World } from './world';
 import { edgeTileNear } from './units';
 
+// Only peasants count as "population": they eat from the granary and fill
+// housing. Soldiers (Stronghold-style) don't consume food or take housing.
 export function populationCount(world: World): number {
   let n = 0;
   for (const u of world.units.values()) {
-    if (u.role === 'peasant' || u.role === 'archer') n++;
+    if (u.role === 'peasant') n++;
   }
   return n;
 }
