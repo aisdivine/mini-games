@@ -7,6 +7,8 @@ import {
   ARCHER_TOWER_RANGE_BONUS,
   AURA_DAMAGE_MULT,
   AURA_RADIUS,
+  BLACKSMITH_DEF_MULT,
+  BLACKSMITH_DMG_MULT,
   BUILDINGS,
   GUARD_AGGRO,
   HEAL_AMOUNT,
@@ -46,13 +48,9 @@ export function updateCombat(world: World, events: SimEvent[]): void {
     spawnRaid(world, events);
   }
 
-  let raidersAlive = 0;
   for (const unit of world.units.values()) {
     if (isSoldier(unit.role)) updateSoldier(world, unit, events);
-    else if (unit.role === 'raider') {
-      if (!unit.home) raidersAlive++; // village guards aren't part of a raid wave
-      updateRaider(world, unit, events);
-    }
+    else if (unit.role === 'raider') updateRaider(world, unit, events);
   }
 
   // Cull the dead (raiders and any soldiers that fell).
@@ -63,16 +61,11 @@ export function updateCombat(world: World, events: SimEvent[]): void {
       if (unit.role === 'raider' || isSoldier(unit.role)) {
         events.push({ type: 'fallen', x: unit.pos.x, y: unit.pos.y, enemy: unit.role === 'raider' });
       }
-      if (unit.role === 'raider' && !unit.home) raidersAlive--;
     }
   }
 
   checkCaptures(world, events);
   payIncome(world);
-
-  if (world.raid.spawnedCount > 0 && raidersAlive === 0 && world.outcome === 'playing') {
-    setOutcome(world, 'won', 'The raid is defeated — your city stands!', events);
-  }
 }
 
 // A village is captured once every one of its defenders is dead. Its buildings
@@ -92,6 +85,16 @@ function checkCaptures(world: World, events: SimEvent[]): void {
       type: 'message',
       text: `🏳 Captured ${type.label}! +${type.income.amount} ${type.income.resource}/10s · unlocked ${type.unlock.replace('_', ' ')}`,
     });
+  }
+  // Whole-frontier banner — a one-time celebration, never a game-over. The game
+  // keeps running after every conquest; this just marks the campaign complete.
+  if (
+    !world.frontierClearedShown &&
+    world.villages.length > 0 &&
+    world.villages.every((v) => v.captured)
+  ) {
+    world.frontierClearedShown = true;
+    events.push({ type: 'message', text: '🏆 The whole frontier is yours! Your realm reigns in peace.' });
   }
 }
 
@@ -162,6 +165,15 @@ function nearestWounded(world: World, medic: Unit): Unit | null {
   return best;
 }
 
+/** True while the player owns at least one Blacksmith — a standing buff to all
+ *  player soldiers (more damage dealt, less damage taken). */
+function hasBlacksmith(world: World): boolean {
+  for (const b of world.buildings.values()) {
+    if (b.type === 'blacksmith' && b.owner === 'player') return true;
+  }
+  return false;
+}
+
 /** A friendly standard-bearer within aura range buffs this unit's damage. */
 function buffed(world: World, unit: Unit): boolean {
   for (const u of world.units.values()) {
@@ -194,7 +206,10 @@ function updateSoldier(world: World, unit: Unit, events: SimEvent[]): void {
   if (dist2(unit, target) <= range) {
     if (unit.attackCooldown === 0 && def.damage > 0) {
       unit.attackCooldown = def.cooldownTicks;
-      const dmg = def.damage * (buffed(world, unit) ? AURA_DAMAGE_MULT : 1);
+      const dmg =
+        def.damage *
+        (buffed(world, unit) ? AURA_DAMAGE_MULT : 1) *
+        (hasBlacksmith(world) ? BLACKSMITH_DMG_MULT : 1);
       target.hp -= dmg;
       if (ranged) events.push({ type: 'arrow', from: { ...unit.pos }, to: { ...target.pos } });
       const kind = ranged ? 'ranged' : unit.role === 'camel_lancer' ? 'charge' : 'melee';
@@ -247,7 +262,7 @@ function guardPost(world: World, raider: Unit, events: SimEvent[]): void {
       raider.path = null;
       if (raider.attackCooldown === 0) {
         raider.attackCooldown = RAIDER_COOLDOWN_TICKS;
-        foe.hp -= RAIDER_DAMAGE;
+        foe.hp -= RAIDER_DAMAGE * (hasBlacksmith(world) ? BLACKSMITH_DEF_MULT : 1);
         events.push({ type: 'hit', x: foe.pos.x, y: foe.pos.y, kind: 'melee' });
       }
     } else {
@@ -274,7 +289,7 @@ function updateRaider(world: World, raider: Unit, events: SimEvent[]): void {
     raider.path = null;
     if (raider.attackCooldown === 0) {
       raider.attackCooldown = RAIDER_COOLDOWN_TICKS;
-      foe.hp -= RAIDER_DAMAGE;
+      foe.hp -= RAIDER_DAMAGE * (hasBlacksmith(world) ? BLACKSMITH_DEF_MULT : 1);
       events.push({ type: 'hit', x: foe.pos.x, y: foe.pos.y, kind: 'melee' });
     }
     return;

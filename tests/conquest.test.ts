@@ -35,6 +35,20 @@ describe('enemy villages & conquest', () => {
     expect(sim.world.unlocked).toContain(type.unlock);
   });
 
+  it('conquering all lands never ends the game — banner only, no game-over', () => {
+    const sim = new Sim(5);
+    sim.world.nextEatTick = Number.MAX_SAFE_INTEGER;
+    sim.world.nextImmigrationTick = Number.MAX_SAFE_INTEGER;
+    for (const v of sim.world.villages) for (const id of v.defenderIds) sim.world.units.delete(id);
+    sim.tick();
+    const events = sim.drainEvents();
+    expect(sim.world.villages.every((v) => v.captured)).toBe(true);
+    expect(sim.world.frontierClearedShown).toBe(true);
+    expect(sim.world.outcome).toBe('playing'); // winning never sets an outcome
+    expect(events.some((e) => e.type === 'gameOver')).toBe(false);
+    expect(events.some((e) => e.type === 'message' && /frontier is yours/i.test(e.text))).toBe(true);
+  });
+
   it('living rivals: an uncaptured village builds up over time', () => {
     const sim = new Sim(5);
     const v = sim.world.villages[0];

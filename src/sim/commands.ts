@@ -12,7 +12,6 @@ import {
   isSoldier,
   MARKET_GOODS,
   MAX_BUILDING_LEVEL,
-  RAID_AT_TICK,
   SOLDIERS,
   upgradeWoodCost,
   type BuildingType,
@@ -40,8 +39,7 @@ export type Command =
   | { type: 'moveUnit'; unitId: number; dest: Vec2 }
   | { type: 'recruitArcher' }
   | { type: 'trainSoldier'; soldier: SoldierType }
-  | { type: 'startRaid' }
-  | { type: 'setRaids'; on: boolean }
+  | { type: 'startRaid' } // debug/testing only — not exposed in the UI
   | { type: 'trade'; resource: Resource; dir: 'buy' | 'sell' }
   | { type: 'spawnPeasant' } // debug
   | { type: 'cheatWood'; amount: number }; // debug
@@ -57,12 +55,14 @@ export function applyCommand(world: World, cmd: Command, events: SimEvent[]): vo
         events.push({ type: 'rejected', reason: `Cannot place ${def.label} there` });
         return;
       }
-      if (world.stockpile.wood < def.costWood) {
-        events.push({ type: 'rejected', reason: `Not enough wood (need ${def.costWood})` });
+      const cost: TrainCost = def.cost ?? { wood: def.costWood };
+      if (!canAfford(world, cost)) {
+        events.push({ type: 'rejected', reason: `Can't afford ${def.label}` });
         return;
       }
-      world.stockpile.wood -= def.costWood;
+      payCost(world, cost);
       const b = placeBuildingRaw(world, cmd.building, cmd.tile);
+      applyBuildingUnlocks(world, cmd.building, events);
       events.push({ type: 'buildingPlaced', id: b.id });
       return;
     }
@@ -169,25 +169,9 @@ export function applyCommand(world: World, cmd: Command, events: SimEvent[]): vo
     }
 
     case 'startRaid': {
+      // Debug/testing hook — force-spawn one raider wave (no longer player-facing;
+      // the home is peaceful). Used by combat tests to exercise the raider AI.
       world.raid.triggered = true;
-      return;
-    }
-
-    case 'setRaids': {
-      world.raidsEnabled = cmd.on;
-      if (cmd.on) {
-        // fresh countdown from now (unless a raid is already underway)
-        if (!world.raid.triggered) world.nextRaidTick = world.tick + RAID_AT_TICK;
-        events.push({ type: 'message', text: '⚔ Raids ON — defend your keep!' });
-      } else {
-        // back to peace: clear any active raiders and reset the wave
-        for (const u of [...world.units.values()]) {
-          if (u.role === 'raider') world.units.delete(u.id);
-        }
-        world.raid = { triggered: false, spawnedCount: 0 };
-        world.nextRaidTick = world.tick + RAID_AT_TICK;
-        events.push({ type: 'message', text: '☮ Raids OFF — peaceful sandbox' });
-      }
       return;
     }
 
@@ -226,6 +210,25 @@ export function applyCommand(world: World, cmd: Command, events: SimEvent[]): vo
       world.stockpile.wood += cmd.amount;
       return;
     }
+  }
+}
+
+/** Support buildings grant permanent training unlocks the moment they're built
+ *  (buildings are placed instantly — there's no construction phase). Idempotent:
+ *  re-placing a Stable does nothing if the unit is already unlocked. */
+function applyBuildingUnlocks(world: World, type: BuildingType, events: SimEvent[]): void {
+  const grants: SoldierType[] =
+    type === 'stable' ? ['knight', 'camel_lancer'] : type === 'siege_workshop' ? ['mangonel'] : [];
+  let unlockedAny = false;
+  for (const s of grants) {
+    if (!world.unlocked.includes(s)) {
+      world.unlocked.push(s);
+      unlockedAny = true;
+    }
+  }
+  if (unlockedAny) {
+    const labels = grants.map((s) => SOLDIERS[s].label).join(' & ');
+    events.push({ type: 'message', text: `🔓 ${BUILDINGS[type].label} built — ${labels} can now be trained!` });
   }
 }
 

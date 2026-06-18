@@ -5,9 +5,10 @@
 import { RAID_AT_TICK, RAIDS_ENABLED, STARTING_GOLD } from '../config';
 import type { Building, Fish, Tree, Unit, World } from './world';
 
-// Bumped to 6: the map grew to 128×128 and the world gained enemy villages /
-// ownership — old saves can't be loaded into the new grid.
-const SAVE_VERSION = 6;
+// Bumped to 7: peaceful-home redesign — new support buildings (blacksmith /
+// stable / siege_workshop) in the BuildingType union and a frontierClearedShown
+// flag. Old saves predate these and can't be trusted into the new rules.
+const SAVE_VERSION = 7;
 
 interface SaveFile {
   version: number;
@@ -55,6 +56,7 @@ export function deserializeWorld(json: string): World | null {
       gold: w.gold ?? STARTING_GOLD,
       raidsEnabled: w.raidsEnabled ?? RAIDS_ENABLED,
       nextRaidTick: w.nextRaidTick ?? RAID_AT_TICK,
+      frontierClearedShown: w.frontierClearedShown ?? false,
       stockpile: { wood: 0, wheat: 0, flour: 0, stone: 0, ...(w.stockpile as Partial<World['stockpile']>) },
       granaryFood: { bread: 0, apples: 0, meat: 0, fish: 0, ...(w.granaryFood as Partial<World['granaryFood']>) },
     };

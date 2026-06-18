@@ -44,7 +44,7 @@ describe('combat', () => {
     expect(sim.world.buildings.has(sim.world.keepId)).toBe(false);
   });
 
-  it('enough archers defeat the raid -> win', () => {
+  it('enough archers defeat the raid — keep survives, game keeps playing (no win game-over)', () => {
     const sim = makeSim();
     sim.world.stockpile.wood = 1000;
     for (let i = 0; i < 10; i++) sim.enqueue({ type: 'recruitArcher' });
@@ -60,29 +60,17 @@ describe('combat', () => {
     run(sim, 200);
     sim.enqueue({ type: 'startRaid' });
     run(sim, 10000);
-    expect(sim.world.outcome).toBe('won');
+    // Defeating a raid no longer ends the game — it just stays in play.
+    expect(raiderCount(sim)).toBe(0);
+    expect(sim.world.buildings.has(sim.world.keepId)).toBe(true);
+    expect(sim.world.outcome).toBe('playing');
   });
 
-  it('raids are off by default — none auto-trigger', () => {
+  it('home is peaceful — raids never auto-trigger', () => {
     const sim = makeSim();
     expect(sim.world.raidsEnabled).toBe(false);
     run(sim, RAID_AT_TICK + 100);
     expect(raiderCount(sim)).toBe(0);
-    expect(sim.world.raid.triggered).toBe(false);
-  });
-
-  it('toggling raids on schedules a wave; toggling off clears it', () => {
-    const sim = makeSim();
-    sim.enqueue({ type: 'setRaids', on: true });
-    sim.tick();
-    expect(sim.world.raidsEnabled).toBe(true);
-    run(sim, RAID_AT_TICK + 100); // countdown elapses → wave spawns
-    expect(raiderCount(sim)).toBeGreaterThan(0);
-
-    sim.enqueue({ type: 'setRaids', on: false });
-    sim.tick();
-    expect(sim.world.raidsEnabled).toBe(false);
-    expect(raiderCount(sim)).toBe(0); // back to peace
     expect(sim.world.raid.triggered).toBe(false);
   });
 

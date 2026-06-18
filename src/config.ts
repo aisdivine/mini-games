@@ -85,6 +85,9 @@ export type BuildingType =
   | 'quarry'
   | 'market'
   | 'barracks'
+  | 'blacksmith'
+  | 'stable'
+  | 'siege_workshop'
   | 'wall'
   | 'tower';
 
@@ -104,6 +107,8 @@ export interface BuildingDef {
   buildable: boolean; // appears in the build menu
   housing?: number;
   recipe?: RecipeDef;
+  /** Multi-resource placement cost. When omitted, costs `costWood` wood only. */
+  cost?: TrainCost;
   // Programmer-art visuals (the future sprite-swap seam lives in buildingView).
   color: number;
   height: number; // extruded box height in px
@@ -194,6 +199,23 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   barracks: {
     type: 'barracks', label: 'Barracks', size: { w: 3, h: 3 }, costWood: 20, hp: 250,
     buildable: true, color: 0x9a6a42, height: 40,
+  },
+  // Army support — these exist to help your soldiers conquer the frontier.
+  // Blacksmith: a standing buff to every player soldier (more attack, more armor).
+  blacksmith: {
+    type: 'blacksmith', label: 'Blacksmith', size: { w: 2, h: 2 }, costWood: 30, hp: 160,
+    buildable: true, cost: { wood: 30, stone: 20 }, color: 0x6b6b75, height: 34,
+  },
+  // Stable: home-grown cavalry — building it unlocks Knight + Camel Lancer at the
+  // Barracks without needing to capture their villages first.
+  stable: {
+    type: 'stable', label: 'Stable', size: { w: 3, h: 2 }, costWood: 40, hp: 180,
+    buildable: true, cost: { wood: 40, gold: 25 }, color: 0x8a6a44, height: 30,
+  },
+  // Siege Workshop: unlocks the Mangonel for breaking enemy towers.
+  siege_workshop: {
+    type: 'siege_workshop', label: 'Siege Workshop', size: { w: 3, h: 3 }, costWood: 50, hp: 200,
+    buildable: true, cost: { wood: 50, stone: 30 }, color: 0x7a5a34, height: 36,
   },
   wall: {
     type: 'wall', label: 'Wall', size: { w: 1, h: 1 }, costWood: 1, hp: 150,
@@ -305,6 +327,15 @@ export const VILLAGE_MAX_BUILDINGS = 7;
 export const VILLAGE_MAX_GUARDS = 8;
 export const GUARD_AGGRO = 8; // tiles; defenders engage intruders within this of home
 export const SOLDIER_AGGRO = 9; // tiles; your idle soldiers auto-engage enemies within this
+
+// The frontier line: your peaceful home is west of this column; enemy lands lie
+// to the east. Purely a visual/affordance marker — soldiers cross it freely to
+// invade. Sits just west of where villages generate (x >= 60).
+export const BORDER_X = 58;
+
+// Blacksmith standing buff to every player soldier while at least one stands.
+export const BLACKSMITH_DMG_MULT = 1.25; // +25% outgoing damage
+export const BLACKSMITH_DEF_MULT = 0.85; // -15% incoming damage
 
 export const HEAL_AMOUNT = 8; // hp a medic restores per heal tick
 export const AURA_RADIUS = 5; // tiles; standard-bearer damage buff range

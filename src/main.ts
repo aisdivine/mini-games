@@ -103,8 +103,13 @@ function canAffordTrain(w: { stockpile: { wood: number; stone: number }; gold: n
 }
 
 const BUILD_ORDER: BuildingType[] = [
-  'house', 'granary', 'appleOrchard', 'hunter', 'fishery', 'woodcutter', 'quarry', 'wheatFarm', 'mill', 'bakery', 'market', 'barracks', 'tower',
+  'house', 'granary', 'appleOrchard', 'hunter', 'fishery', 'woodcutter', 'quarry', 'wheatFarm', 'mill', 'bakery', 'market', 'barracks', 'blacksmith', 'stable', 'siege_workshop', 'tower',
 ];
+
+/** Compact placement-cost string for a building, e.g. "🪵40 🪙25". */
+function buildingCostText(t: BuildingType): string {
+  return costText(BUILDINGS[t].cost ?? { wood: BUILDINGS[t].costWood });
+}
 
 // HUD resource icon id for a tradeable resource.
 const RESOURCE_ICON: Record<Resource, string> = {
@@ -216,12 +221,11 @@ async function start(): Promise<void> {
     [
       ...BUILD_ORDER.map((t) => ({
         id: t,
-        label: `${BUILDINGS[t].label} (${BUILDINGS[t].costWood})`,
+        label: `${BUILDINGS[t].label} (${buildingCostText(t)})`,
         hint: BUILDINGS[t].recipe ? 'Needs a worker peasant' : undefined,
       })),
       { id: 'wall', label: `Wall (${BUILDINGS.wall.costWood}/tile)`, hint: 'Click-drag to draw' },
       { id: 'archer', label: `Archer (${ARCHER_COST_WOOD})`, hint: 'Recruited at the keep' },
-      { id: 'raids', label: '⚔ Raids: Off', hint: 'Toggle enemy raids on/off' },
       { id: 'demolish', label: 'Demolish', hint: 'Click a building to remove it (50% refund)' },
       { id: 'resetview', label: 'Reset View', hint: 'Re-center on the keep (Home / c)' },
       { id: 'save', label: '💾 Save', hint: 'Save your city now (also autosaves every 30s · S)' },
@@ -230,8 +234,6 @@ async function start(): Promise<void> {
     (id) => {
       if (id === 'archer') {
         sim.enqueue({ type: 'recruitArcher' });
-      } else if (id === 'raids') {
-        sim.enqueue({ type: 'setRaids', on: !sim.world.raidsEnabled });
       } else if (id === 'demolish') {
         setMode(mode.kind === 'demolish' ? { kind: 'select' } : { kind: 'demolish' });
       } else if (id === 'wall') {
@@ -437,7 +439,6 @@ async function start(): Promise<void> {
     hud.showMessage(atmosphere.mode === 'night' ? '🌙 Night mode' : '☀️ Day mode');
   });
   hotkeys.bind('w', () => sim.enqueue({ type: 'cheatWood', amount: 100 }));
-  hotkeys.bind('r', () => sim.enqueue({ type: 'startRaid' }));
 
   // --- Edge scrolling -------------------------------------------------------
   // Move the cursor near a screen edge to pan the camera that way (RTS-style),
@@ -605,7 +606,8 @@ async function start(): Promise<void> {
     if (mode.kind === 'place' && hovered) {
       const def = BUILDINGS[mode.building];
       const valid =
-        canPlace(sim.world, def, hovered) && sim.world.stockpile.wood >= def.costWood;
+        canPlace(sim.world, def, hovered) &&
+        canAffordTrain(sim.world, def.cost ?? { wood: def.costWood });
       overlay.setGhost(mode.building, hovered, valid);
     } else if (mode.kind === 'wall') {
       const preview = wallPreview.length > 0 ? wallPreview : hovered ? [hovered] : [];
@@ -692,23 +694,6 @@ async function start(): Promise<void> {
     const w = sim.world;
     const pop = populationCount(w);
     const housing = housingCapacity(w);
-    const raidIn = w.raid.triggered
-      ? null
-      : Math.max(0, Math.ceil((w.nextRaidTick - w.tick) / SIM_TICKS_PER_SEC));
-    const mmss = raidIn !== null
-      ? `${Math.floor(raidIn / 60)}:${String(raidIn % 60).padStart(2, '0')}`
-      : null;
-    const raidStat = !w.raidsEnabled
-      ? `<span class="stat" data-tip="Raids are off — peaceful sandbox. Toggle in the build menu.">☮ peaceful</span>`
-      : mmss
-        ? `<span class="stat" data-tip="Time until the next enemy raid arrives from the east.">⚔ raid in ${mmss}</span>`
-        : `<span class="stat" data-tip="A raid is underway — defend your keep!">⚔ raid!</span>`;
-    // keep the build-menu toggle's label in sync with the live state
-    hud.setButtonLabel(
-      'raids',
-      w.raidsEnabled ? '⚔ Raids: On' : '⚔ Raids: Off',
-      w.raidsEnabled ? 'Enemy raids enabled — click to return to peace' : 'No raids — click to enable enemy attacks',
-    );
     // play-control labels
     hud.setButtonLabel('pause', paused ? '▶' : '⏸', paused ? 'Resume (P)' : 'Pause (P)');
     hud.setButtonLabel('speed', `${speed}×`, 'Cycle game speed (1/2/3)');
@@ -729,9 +714,9 @@ async function start(): Promise<void> {
         `<span class="stat"${t('Population / housing capacity. Build Houses to raise the cap.')}>👥 ${pop}/${housing}</span>`,
         `<span class="stat"${t('Popularity — rises when peasants are fed (varied diet helps), falls when they starve. 0 = you lose.')}>❤️ ${w.popularity} (food ${w.lastFoodDelta >= 0 ? '+' : ''}${w.lastFoodDelta})</span>`,
         w.villages.length
-          ? `<span class="stat"${t('Enemy villages conquered. March soldiers in and defeat the defenders to capture one — it flips to you, opens its land, gives passive income, and unlocks an elite unit.')}>🏳 ${w.villages.filter((v) => v.captured).length}/${w.villages.length}</span>`
+          ? `<span class="stat"${t('Enemy lands conquered. Your home is peaceful — build an army, then march your soldiers east across the frontier to invade. Defeat a land\'s defenders to capture it: its land opens, it pays passive income, and it unlocks an elite unit. Winning never ends the game.')}>🏳 ${w.villages.filter((v) => v.captured).length}/${w.villages.length}</span>`
           : '',
-        raidStat,
+        `<span class="stat"${t('Your home is a peaceful community — no raids or attacks here. Conquest happens out on the eastern frontier.')}>☮ peaceful home</span>`,
         `<span class="stat"${t('Game speed — 1/2/3 to change, P to pause.')}>${paused ? '⏸ paused' : `▶ ${speed}×`}</span>`,
       ].join(''),
     );
@@ -807,7 +792,7 @@ async function start(): Promise<void> {
 
     hud.setDebug(
       `${hovered ? `tile (${hovered.x}, ${hovered.y})` : 'tile —'}  tick ${w.tick}\n` +
-        `keys: 1/2/3 speed · p pause · c center · g paths · w +wood · r raid · space cancel`,
+        `keys: 1/2/3 speed · p pause · c center · g paths · w +wood · space cancel`,
     );
   }
 }

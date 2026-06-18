@@ -169,6 +169,8 @@ export interface World {
   /** Tick the next auto-raid fires (reset whenever raids are switched on). */
   nextRaidTick: number;
   raid: RaidState;
+  /** One-shot guard for the "whole frontier conquered" banner. */
+  frontierClearedShown: boolean;
   outcome: 'playing' | 'won' | 'lost';
   outcomeReason: string;
   keepId: number;
@@ -201,6 +203,7 @@ export function createWorld(seed: number): World {
     raidsEnabled: RAIDS_ENABLED,
     nextRaidTick: RAID_AT_TICK,
     raid: { triggered: false, spawnedCount: 0 },
+    frontierClearedShown: false,
     outcome: 'playing',
     outcomeReason: '',
     keepId: 0,
