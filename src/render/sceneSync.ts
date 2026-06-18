@@ -13,9 +13,10 @@ import { animateBuilding, createBuildingView, type BuildingView } from './views/
 import { createUnitView, tunicColorFor, type UnitView } from './views/unitView';
 import type { UnitTextures } from './unitTextures';
 import type { BuildingLayers } from './buildingLayers';
+import type { CombatFx } from './combatFx';
 
 interface Effect {
-  g: Graphics;
+  g: Container; // Graphics (procedural) or Sprite (combat FX)
   ttl: number;
   max: number;
   vy: number; // vertical drift per tick (negative = rises)
@@ -53,7 +54,21 @@ export class SceneSync {
     private art: ArtTextures,
     private units: UnitTextures,
     private layers: BuildingLayers,
+    private fx: CombatFx,
   ) {}
+
+  /** Spawn a short-lived combat FX sprite at a world tile point. */
+  private spawnFx(key: string, wx: number, wy: number, opts: { ttl: number; grow: number; vy: number; yOff?: number; tint?: number }): void {
+    const f = this.fx.get(key);
+    if (!f) return;
+    const s = new Sprite(f.texture);
+    s.anchor.set(f.ax, f.ay);
+    if (opts.tint !== undefined) s.tint = opts.tint;
+    const p = tileToScreen(wx, wy);
+    s.position.set(p.x, p.y + (opts.yOff ?? -18));
+    this.effectLayer.addChild(s);
+    this.effects.push({ g: s, ttl: opts.ttl, max: opts.ttl, vy: opts.vy, grow: opts.grow });
+  }
 
   update(world: World, events: SimEvent[], alpha: number, dtMs: number, night = 0): void {
     this.clock += dtMs;
@@ -313,6 +328,14 @@ export class SceneSync {
         this.spawnDust(world, e.id);
       } else if (e.type === 'upgraded') {
         this.spawnSparkle(world, e.id);
+      } else if (e.type === 'hit') {
+        if (e.kind === 'melee') this.spawnFx('slash', e.x, e.y, { ttl: 6, grow: 0.06, vy: 0 });
+        if (e.kind === 'charge') this.spawnFx('charge', e.x, e.y, { ttl: 12, grow: 0.05, vy: 0.3, yOff: -8 });
+        this.spawnFx('impact', e.x, e.y, { ttl: 7, grow: 0.07, vy: 0 });
+      } else if (e.type === 'fallen') {
+        this.spawnFx('fallen', e.x, e.y, {
+          ttl: 90, grow: 0, vy: 0, yOff: -4, tint: e.enemy ? 0xff7a6a : 0xffffff,
+        });
       }
     }
   }

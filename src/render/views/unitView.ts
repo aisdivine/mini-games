@@ -9,6 +9,8 @@ import { SKIN_TONES, type UnitTextures } from '../unitTextures';
 
 export { tunicColorFor } from '../unitTextures';
 
+const ATTACK_POSE_TICKS = 7; // how long the attack pose shows after a strike
+
 export const RESOURCE_COLORS: Record<Resource, number> = {
   wood: 0x8b5a2b,
   wheat: 0xd9c34a,
@@ -48,10 +50,14 @@ export function createUnitView(unit: Unit, tex: UnitTextures): UnitView {
   const view: UnitView = {
     container,
     refresh(u: Unit, tunic: number) {
-      const k = tex.key(u.role, skinIndex, tunic);
+      // Show the attack pose for a few ticks right after a soldier strikes.
+      const attacking =
+        isSoldier(u.role) &&
+        u.attackCooldown > SOLDIERS[u.role].cooldownTicks - ATTACK_POSE_TICKS;
+      const k = tex.key(u.role, skinIndex, tunic, attacking);
       if (k !== texKey) {
         texKey = k;
-        sprite.texture = tex.get(u.role, skinIndex, tunic);
+        sprite.texture = tex.get(u.role, skinIndex, tunic, attacking);
       }
       const carrying = u.carrying?.resource ?? null;
       if (carrying !== lastCarrying) {

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="110" height="100" viewBox="0 0 110 100" data-anchor="55,94" data-team-fill="#3A5FB5" data-unit="camel_lancer" data-pose="attack">
+<ellipse cx="55" cy="94" rx="32" ry="6" fill="#00000022"/>
+<g id="dust"><circle cx="84" cy="90" r="6" fill="#D9C89A" opacity="0.6"/><circle cx="92" cy="88" r="5" fill="#E6D6A8" opacity="0.5"/><circle cx="78" cy="92" r="4" fill="#CFBC8A" opacity="0.5"/></g>
+<rect x="36" y="72" width="4" height="20" rx="2" fill="#A07A48" transform="rotate(-26 38 74)"/><rect x="74" y="72" width="4" height="20" rx="2" fill="#A07A48" transform="rotate(28 76 74)"/>
+<rect x="44" y="72" width="4" height="20" rx="2" fill="#B68A56" transform="rotate(-16 46 74)"/><rect x="66" y="72" width="4" height="20" rx="2" fill="#B68A56" transform="rotate(18 68 74)"/>
+<path d="M36 74 Q34 56 50 54 Q54 42 62 50 Q66 42 74 50 Q86 54 80 74 Q74 64 64 64 Q54 64 36 74 Z" fill="#C49A5C"/>
+<path d="M76 50 Q82 38 80 32 Q76 36 74 46 Z" fill="#C49A5C"/><circle cx="78" cy="34" r="4.5" fill="#C49A5C"/><circle cx="80" cy="33" r="1" fill="#2A1E12"/>
+<rect x="48" y="50" width="16" height="6" rx="2" fill="#7A4E2E"/>
+<path d="M50 50 Q49 43 56 43 Q63 44 62 51 L64 60 L48 60 Z" fill="#3A5FB5"/><path d="M56 43 Q63 44 62 51 L64 60 L56 60 Z" fill="#2E4C94"/>
+<path d="M60 48 L8 45" stroke="#7A5C38" stroke-width="2.4" stroke-linecap="round"/><polygon points="8,45 14,43 13,48" fill="#AEB4BA"/><path d="M16 44 L23 42 L21 48 L16 47 Z" fill="#C0392B"/>
+<path d="M58 49 L62 46" stroke="#E0A87E" stroke-width="3" stroke-linecap="round"/>
+<circle cx="55" cy="35" r="5.5" fill="#E8B58C"/><path d="M49 35 Q49 27 55 27 Q61 27 61 35 Z" fill="#AEB4BA"/><rect x="54" y="31" width="2" height="6" fill="#8B9197"/>
+<circle cx="53" cy="35.5" r="0.8" fill="#3A2A19"/><circle cx="57.5" cy="35.5" r="0.8" fill="#3A2A19"/>
+</svg>

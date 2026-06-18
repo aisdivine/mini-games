@@ -19,11 +19,25 @@ import camel_lancer from '../art/v2/pack/units/camel_lancer.svg?raw';
 import mangonel from '../art/v2/pack/units/mangonel.svg?raw';
 import medic from '../art/v2/pack/units/medic.svg?raw';
 import standard_bearer from '../art/v2/pack/units/standard_bearer.svg?raw';
+import spearmanAtk from '../art/v2/pack/units/spearman_attack.svg?raw';
+import manatarmsAtk from '../art/v2/pack/units/manatarms_attack.svg?raw';
+import pikemanAtk from '../art/v2/pack/units/pikeman_attack.svg?raw';
+import knightAtk from '../art/v2/pack/units/knight_attack.svg?raw';
+import archerAtk from '../art/v2/pack/units/archer_attack.svg?raw';
+import crossbowmanAtk from '../art/v2/pack/units/crossbowman_attack.svg?raw';
+import camelLancerAtk from '../art/v2/pack/units/camel_lancer_attack.svg?raw';
+import mangonelAtk from '../art/v2/pack/units/mangonel_attack.svg?raw';
 import { rasterizeSvg } from './assets';
 
 const SOLDIER_SVG: Record<SoldierType, string> = {
   spearman, manatarms, pikeman, knight, archer, crossbowman,
   camel_lancer, mangonel, medic, standard_bearer,
+};
+
+// Attack-pose art (only the fighters that ship one — not medic/standard-bearer).
+const SOLDIER_ATK_SVG: Partial<Record<SoldierType, string>> = {
+  spearman: spearmanAtk, manatarms: manatarmsAtk, pikeman: pikemanAtk, knight: knightAtk,
+  archer: archerAtk, crossbowman: crossbowmanAtk, camel_lancer: camelLancerAtk, mangonel: mangonelAtk,
 };
 
 // Skin tones from the art spec, indexed by `unit.id % SKIN_TONES.length`.
@@ -77,13 +91,14 @@ function recolorTunic(svg: string, tunic: number): string {
 
 export interface UnitTextures {
   anchor: { x: number; y: number };
-  get(role: UnitRole, skinIndex: number, tunic: number): Texture;
+  get(role: UnitRole, skinIndex: number, tunic: number, attacking?: boolean): Texture;
   /** Stable key for a unit's current appearance, for change detection. */
-  key(role: UnitRole, skinIndex: number, tunic: number): string;
+  key(role: UnitRole, skinIndex: number, tunic: number, attacking?: boolean): string;
 }
 
-function keyOf(role: UnitRole, skinIndex: number, tunic: number): string {
-  return role === 'peasant' ? `peasant:${skinIndex}:${tunic}` : `${role}:${skinIndex}`;
+function keyOf(role: UnitRole, skinIndex: number, tunic: number, attacking = false): string {
+  if (role === 'peasant') return `peasant:${skinIndex}:${tunic}`;
+  return attacking ? `${role}:atk:${skinIndex}` : `${role}:${skinIndex}`;
 }
 
 export async function loadUnitTextures(): Promise<UnitTextures> {
@@ -107,19 +122,32 @@ export async function loadUnitTextures(): Promise<UnitTextures> {
     for (let s = 0; s < SKIN_TONES.length; s++) {
       for (const tunic of tunics) {
         const k = keyOf(role, s, tunic);
-        if (map.has(k)) continue;
-        let svg = recolorSkin(srcByRole[role], SKIN_TONES[s]);
-        if (role === 'peasant') svg = recolorTunic(svg, tunic);
-        tasks.push(rasterizeSvg(svg).then((tex) => void map.set(k, tex)));
+        if (!map.has(k)) {
+          let svg = recolorSkin(srcByRole[role], SKIN_TONES[s]);
+          if (role === 'peasant') svg = recolorTunic(svg, tunic);
+          tasks.push(rasterizeSvg(svg).then((tex) => void map.set(k, tex)));
+        }
+      }
+      // attack-pose variant for the fighters that ship one
+      const atkSvg = SOLDIER_ATK_SVG[role as SoldierType];
+      if (atkSvg) {
+        const ak = keyOf(role, s, IDLE_TUNIC, true);
+        if (!map.has(ak)) {
+          tasks.push(rasterizeSvg(recolorSkin(atkSvg, SKIN_TONES[s])).then((tex) => void map.set(ak, tex)));
+        }
       }
     }
   }
   await Promise.all(tasks);
 
   const fallback = map.get(keyOf('peasant', 0, IDLE_TUNIC))!;
+  const lookup = (role: UnitRole, skinIndex: number, tunic: number, attacking = false): Texture =>
+    map.get(keyOf(role, skinIndex, tunic, attacking)) ??
+    map.get(keyOf(role, skinIndex, tunic, false)) ?? // no attack pose → standing
+    fallback;
   return {
     anchor: { x: 17, y: 46 },
     key: keyOf,
-    get: (role, skinIndex, tunic) => map.get(keyOf(role, skinIndex, tunic)) ?? fallback,
+    get: lookup,
   };
 }

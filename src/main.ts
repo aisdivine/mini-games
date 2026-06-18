@@ -29,6 +29,7 @@ import { buildingAt, type Building, type Unit, type Vec2 } from './sim/world';
 import { createApp } from './render/app';
 import { loadArtTextures } from './render/assets';
 import { loadBuildingLayers } from './render/buildingLayers';
+import { loadCombatFx } from './render/combatFx';
 import { loadUnitTextures } from './render/unitTextures';
 import iconsSvg from './art/v2/icons.svg?raw';
 import { Camera } from './render/camera';
@@ -125,11 +126,12 @@ async function start(): Promise<void> {
   const sim = new Sim(Date.now() & 0x7fffffff, loadedWorld ?? undefined);
   if (loadedWorld) setTimeout(() => hud.showMessage('Game resumed from autosave'), 300);
 
-  const [art, unitTex, buildingLayers, lifeTex] = await Promise.all([
+  const [art, unitTex, buildingLayers, lifeTex, combatFx] = await Promise.all([
     loadArtTextures(),
     loadUnitTextures(),
     loadBuildingLayers(),
     loadAmbientLife(),
+    loadCombatFx(),
   ]);
   const groundView = createGroundView(sim.world);
   layers.ground.addChild(groundView);
@@ -137,7 +139,7 @@ async function start(): Promise<void> {
   layers.ground.addChild(water.g);
   const overlay = new OverlayView();
   layers.overlay.addChild(overlay.container);
-  const sceneSync = new SceneSync(layers.entities, layers.overlay, art, unitTex, buildingLayers);
+  const sceneSync = new SceneSync(layers.entities, layers.overlay, art, unitTex, buildingLayers, combatFx);
 
   // Ambient wildlife: a sky layer (above the world) for birds; the camel rides
   // the depth-sorted entity layer.

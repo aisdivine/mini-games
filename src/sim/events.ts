@@ -9,6 +9,8 @@ export type SimEvent =
   | { type: 'buildingRemoved'; id: number }
   | { type: 'upgraded'; id: number }
   | { type: 'arrow'; from: Vec2; to: Vec2 }
+  | { type: 'hit'; x: number; y: number; kind: 'melee' | 'ranged' | 'charge' }
+  | { type: 'fallen'; x: number; y: number; enemy: boolean }
   | { type: 'unitDied'; id: number; role: string }
   | { type: 'raidStarted' }
   | { type: 'gameOver'; outcome: 'won' | 'lost'; reason: string };

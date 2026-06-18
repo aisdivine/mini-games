@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="46" viewBox="0 0 34 46" data-anchor="17,46" data-team-fill="#3A5FB5" data-unit="spearman" data-pose="attack">
+<ellipse cx="17" cy="44" rx="12" ry="3.5" fill="#00000022"/>
+<rect x="8" y="34" width="4.5" height="9" rx="2" fill="#7A5C38" transform="rotate(-24 10 34)"/><rect x="20" y="34" width="4.5" height="10" rx="2" fill="#6B4F30" transform="rotate(22 22 34)"/>
+<circle cx="27" cy="19" r="5" fill="#8E6A3E"/><circle cx="27" cy="19" r="5" fill="none" stroke="#5A4228" stroke-width="1.2"/>
+<path d="M10 16 Q10 10 17 10 Q24 10 24 16 L26 35 L8 35 Z" fill="#3A5FB5"/><path d="M17 10 Q24 10 24 16 L26 35 L17 35 Z" fill="#2E4C94"/>
+<line x1="24" y1="20" x2="-3" y2="17" stroke="#7A5C38" stroke-width="2" stroke-linecap="round"/><polygon points="-3,17 4,15 3,20" fill="#AEB4BA"/>
+<path d="M11 17 L5 18" stroke="#E8B58C" stroke-width="3.5" stroke-linecap="round"/><path d="M22 17 L15 18" stroke="#E0A87E" stroke-width="3.5" stroke-linecap="round"/>
+<circle cx="16" cy="6" r="6.5" fill="#E8B58C"/><path d="M10 4 Q11 -1 16 -1 Q21 -1 22 4 Q16 1 10 4 Z" fill="#6B4F30"/>
+<circle cx="13" cy="6.5" r="0.9" fill="#3A2A19"/><circle cx="17.5" cy="6.5" r="0.9" fill="#3A2A19"/>
+</svg>

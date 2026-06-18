@@ -60,6 +60,9 @@ export function updateCombat(world: World, events: SimEvent[]): void {
     if (unit.hp <= 0) {
       world.units.delete(unit.id);
       events.push({ type: 'unitDied', id: unit.id, role: unit.role });
+      if (unit.role === 'raider' || isSoldier(unit.role)) {
+        events.push({ type: 'fallen', x: unit.pos.x, y: unit.pos.y, enemy: unit.role === 'raider' });
+      }
       if (unit.role === 'raider' && !unit.home) raidersAlive--;
     }
   }
@@ -194,6 +197,8 @@ function updateSoldier(world: World, unit: Unit, events: SimEvent[]): void {
       const dmg = def.damage * (buffed(world, unit) ? AURA_DAMAGE_MULT : 1);
       target.hp -= dmg;
       if (ranged) events.push({ type: 'arrow', from: { ...unit.pos }, to: { ...target.pos } });
+      const kind = ranged ? 'ranged' : unit.role === 'camel_lancer' ? 'charge' : 'melee';
+      events.push({ type: 'hit', x: target.pos.x, y: target.pos.y, kind });
       if (def.special === 'splash') splash(world, target, dmg);
     }
   } else {
@@ -234,7 +239,7 @@ function nearTower(world: World, archer: Unit): boolean {
 
 // Village defender: hold near home; chase + hit intruders within aggro of home;
 // drift back otherwise. Never marches on the keep.
-function guardPost(world: World, raider: Unit): void {
+function guardPost(world: World, raider: Unit, events: SimEvent[]): void {
   const home = raider.home!;
   const foe = nearestSoldier(world, raider);
   if (foe && Math.hypot(foe.pos.x - home.x, foe.pos.y - home.y) <= GUARD_AGGRO) {
@@ -243,6 +248,7 @@ function guardPost(world: World, raider: Unit): void {
       if (raider.attackCooldown === 0) {
         raider.attackCooldown = RAIDER_COOLDOWN_TICKS;
         foe.hp -= RAIDER_DAMAGE;
+        events.push({ type: 'hit', x: foe.pos.x, y: foe.pos.y, kind: 'melee' });
       }
     } else {
       moveToward(world, raider, foe.pos);
@@ -257,7 +263,7 @@ function guardPost(world: World, raider: Unit): void {
 function updateRaider(world: World, raider: Unit, events: SimEvent[]): void {
   // Village guards hold their post and only engage intruders near home.
   if (raider.home) {
-    guardPost(world, raider);
+    guardPost(world, raider, events);
     return;
   }
 
@@ -269,6 +275,7 @@ function updateRaider(world: World, raider: Unit, events: SimEvent[]): void {
     if (raider.attackCooldown === 0) {
       raider.attackCooldown = RAIDER_COOLDOWN_TICKS;
       foe.hp -= RAIDER_DAMAGE;
+      events.push({ type: 'hit', x: foe.pos.x, y: foe.pos.y, kind: 'melee' });
     }
     return;
   }
