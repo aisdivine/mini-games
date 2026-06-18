@@ -1,10 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="130" height="126" viewBox="0 0 130 126" data-anchor="65,92" data-footprint="2x2">
+<defs><radialGradient id="forge" cx="50%" cy="60%" r="60%"><stop offset="0%" stop-color="#FFE38A"/><stop offset="55%" stop-color="#F6A12B"/><stop offset="100%" stop-color="#C0392B"/></radialGradient></defs>
 <ellipse cx="65" cy="105" rx="33" ry="8" fill="#00000022"/>
-<polygon points="35,62 65,77 65,107 35,92" fill="#B5AC9B"/>
-<polygon points="65,77 95,62 95,92 65,107" fill="#958D7C"/>
-<polygon points="35,62 65,77 65,42" fill="#6E5430"/><polygon points="65,77 95,62 65,42" fill="#5A4228"/>
-<path d="M38 80 L38 62 L52 69 L52 88 Z" fill="#2E2620"/><path d="M40 78 L40 65 L50 70 L50 84 Z" fill="#C0392B"/><ellipse cx="45" cy="75" rx="3.6" ry="4.6" fill="#E8C45A"/><ellipse cx="45" cy="74" rx="2" ry="2.6" fill="#F4E08A"/>
-<rect x="76" y="32" width="9" height="22" fill="#5A4632"/><rect x="76" y="32" width="9" height="4" fill="#6E5430"/><rect x="74" y="28" width="13" height="5" fill="#3A2E22"/>
-<polygon points="49,100 61,100 61,103 49,103" fill="#6E5430"/>
-<polygon points="48,94 62,94 65,99 45,99" fill="#7E7A72"/><polygon points="48,94 65,99 65,101 48,96" fill="#5A554E"/><polygon points="53,94 57,94 58,91 52,91" fill="#928D80"/><rect x="54" y="98" width="3" height="5" fill="#5A4632"/>
+<polygon points="35,68 65,83 65,107 35,92" fill="#B5AC9B"/><polygon points="65,83 95,68 95,92 65,107" fill="#958D7C"/>
+<line x1="35" y1="76" x2="65" y2="91" stroke="#A39A88" stroke-width="0.6"/><line x1="95" y1="76" x2="65" y2="91" stroke="#857D6E" stroke-width="0.6"/>
+<polygon points="35,68 65,83 65,45" fill="#6E5430"/><polygon points="65,83 95,68 65,45" fill="#5A4228"/>
+<line x1="44" y1="60" x2="65" y2="71" stroke="#5A4228" stroke-width="0.6"/><line x1="86" y1="60" x2="65" y2="71" stroke="#4A3622" stroke-width="0.6"/>
+<polygon points="65,45 67,49 63,49" fill="#C0392B"/>
+<rect x="74" y="48" width="7" height="17" fill="#958D7C"/><rect x="74" y="48" width="7" height="3" fill="#B5AC9B"/>
+<ellipse cx="78" cy="93" rx="10" ry="8" fill="#F6A12B" opacity="0.25"/>
+<path d="M72 100 L72 88 Q78 83 84 88 L84 99 Z" fill="url(#forge)"/><path d="M72 88 Q78 84 84 88" fill="none" stroke="#7A2A18" stroke-width="1"/>
+<rect x="41" y="99" width="9" height="6" rx="1" fill="#6B4F30"/>
+<path d="M38 98 L52 98 L50 95 L55 94 L55 92 L44 92 L44 95 L40 95 Z" fill="#4A4A4A"/><path d="M38 98 L52 98 L50 95 L44 95 Z" fill="#5E5E5E"/>
+<line x1="47" y1="92" x2="54" y2="85" stroke="#3A2A19" stroke-width="1.6" stroke-linecap="round"/><rect x="53" y="83" width="5" height="3.5" rx="1" fill="#6E747A"/>
 </svg>

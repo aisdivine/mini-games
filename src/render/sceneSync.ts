@@ -4,7 +4,7 @@
 // chop chips) off a render clock — never the sim.
 
 import { Container, Graphics, Sprite } from 'pixi.js';
-import { BUILDINGS, MAP_W, MAP_H, T_GRASS, T_ROCK, T_WATER } from '../config';
+import { BORDER_X, BUILDINGS, MAP_W, MAP_H, T_GRASS, T_ROCK, T_WATER } from '../config';
 import type { SimEvent } from '../sim/events';
 import type { Fish, Tree, World } from '../sim/world';
 import type { ArtTextures } from './assets';
@@ -130,6 +130,27 @@ export class SceneSync {
     }
 
     this.buildReeds(world);
+    this.buildFrontier(world);
+  }
+
+  /** A line of border posts down the frontier column (BORDER_X): peaceful home
+   *  to the west, enemy lands to the east. Spaced out, skipping water/rock and
+   *  occupied tiles, so it reads as a marked boundary you march your army past. */
+  private buildFrontier(world: World): void {
+    const entry = this.art.get('frontierPost');
+    if (!entry) return;
+    for (let y = 1; y < MAP_H - 1; y += 3) {
+      const i = y * MAP_W + BORDER_X;
+      if (world.terrain[i] !== T_GRASS || world.occupancy[i] !== 0) continue;
+      const sprite = new Sprite(entry.texture);
+      sprite.position.set(-entry.anchor.x, -entry.anchor.y);
+      const c = new Container();
+      c.addChild(sprite);
+      const p = tileToScreen(BORDER_X + 0.5, y + 0.5);
+      c.position.set(p.x, p.y);
+      c.zIndex = BORDER_X + y;
+      this.entityLayer.addChild(c);
+    }
   }
 
   /** Reed clumps on the shore — grass tiles touching water. Deterministic

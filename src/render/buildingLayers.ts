@@ -14,6 +14,7 @@ import towerFlag from '../art/v2/pack/buildings/tower_flag.svg?raw';
 import millSails from '../art/v2/pack/buildings/mill_sails.svg?raw';
 import houseSmoke from '../art/v2/pack/buildings/house_smoke.svg?raw';
 import bakerySmoke from '../art/v2/pack/buildings/bakery_smoke.svg?raw';
+import blacksmithSmoke from '../art/v2/pack/buildings/blacksmith_smoke.svg?raw';
 import woodSaw from '../art/v2/pack/buildings/wood_saw.svg?raw';
 import wheatStalks from '../art/v2/pack/buildings/wheat_stalks.svg?raw';
 import campfireFlame from '../art/v2/pack/buildings/campfire_flame.svg?raw';
@@ -36,6 +37,8 @@ const SPECS: Partial<Record<BuildingType, LayerSpec[]>> = {
   mill: [{ raw: millSails, motion: 'sails' }],
   house: [{ raw: houseSmoke, motion: 'smoke' }, { raw: windowGlow, motion: 'glow' }],
   bakery: [{ raw: bakerySmoke, motion: 'smoke', activeOnly: true }],
+  // The forge is always lit — smoke puffs continuously (no production state).
+  blacksmith: [{ raw: blacksmithSmoke, motion: 'smoke' }],
   woodcutter: [{ raw: woodSaw, motion: 'saw', activeOnly: true }],
   wheatFarm: [{ raw: wheatStalks, motion: 'stalks' }],
   market: [{ raw: marketAwning, motion: 'awning' }],
