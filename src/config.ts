@@ -298,6 +298,11 @@ export const VILLAGE_TYPES: VillageType[] = [
 export const ELITE_SOLDIERS: SoldierType[] = ['knight', 'crossbowman', 'camel_lancer', 'mangonel'];
 export const VILLAGE_RADIUS = 6; // no-build zone around an enemy village center
 export const VILLAGE_INCOME_INTERVAL = 200; // ticks (10s) between income payouts
+// Living rivals: uncaptured villages keep building (towers/huts) + posting more
+// guards over time, so the longer you leave one be, the tougher the fort.
+export const VILLAGE_GROW_INTERVAL = 1400; // ticks (~70s) between growth steps
+export const VILLAGE_MAX_BUILDINGS = 7;
+export const VILLAGE_MAX_GUARDS = 8;
 export const GUARD_AGGRO = 8; // tiles; defenders engage intruders within this of home
 export const SOLDIER_AGGRO = 9; // tiles; your idle soldiers auto-engage enemies within this
 

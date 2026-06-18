@@ -19,6 +19,10 @@ import {
   T_ROCK,
   T_WATER,
   TREE_CLEAR_RADIUS,
+  VILLAGE_GROW_INTERVAL,
+  VILLAGE_MAX_BUILDINGS,
+  VILLAGE_MAX_GUARDS,
+  VILLAGE_RADIUS,
   VILLAGE_TYPES,
   TREE_CLUSTERS,
   TREE_PER_CLUSTER,
@@ -261,11 +265,11 @@ function generateVillages(world: World, cx: number, cy: number): void {
       buildingIds: [],
       defenderIds: [],
     };
-    // a center (granary) + two huts, all enemy-owned
+    // a fort: a central tower (their "castle") + a couple of huts, enemy-owned
     const layout: { type: BuildingType; dx: number; dy: number }[] = [
-      { type: 'granary', dx: 0, dy: 0 },
+      { type: 'tower', dx: 0, dy: 0 },
       { type: 'house', dx: -3, dy: 1 },
-      { type: 'house', dx: 3, dy: -1 },
+      { type: 'granary', dx: 3, dy: -1 },
     ];
     for (const b of layout) {
       const tile = { x: v.x + b.dx, y: v.y + b.dy };
@@ -298,6 +302,43 @@ function inFree(world: World, type: BuildingType, tile: Vec2): boolean {
     }
   }
   return true;
+}
+
+const GROWTH_POOL: BuildingType[] = ['tower', 'house', 'market', 'granary', 'woodcutter'];
+
+/** A free 2×2-ish build site within a village's footprint radius. */
+function villageSite(world: World, center: Vec2, type: BuildingType): Vec2 | null {
+  for (let tries = 0; tries < 24; tries++) {
+    const x = center.x + nextInt(world, VILLAGE_RADIUS * 2 - 1) - (VILLAGE_RADIUS - 1);
+    const y = center.y + nextInt(world, VILLAGE_RADIUS * 2 - 1) - (VILLAGE_RADIUS - 1);
+    if (Math.hypot(x - center.x, y - center.y) > VILLAGE_RADIUS - 1) continue;
+    if (inFree(world, type, { x, y })) return { x, y };
+  }
+  return null;
+}
+
+/** Living rivals: every growth step, each uncaptured village raises one more
+ *  building and posts another guard, up to caps. Called each tick. */
+export function growVillages(world: World): void {
+  if (world.tick === 0 || world.tick % VILLAGE_GROW_INTERVAL !== 0) return;
+  for (const v of world.villages) {
+    if (v.captured) continue;
+    if (v.buildingIds.length < VILLAGE_MAX_BUILDINGS) {
+      const type = GROWTH_POOL[v.buildingIds.length % GROWTH_POOL.length];
+      const site = villageSite(world, v.center, type);
+      if (site) v.buildingIds.push(placeBuildingRaw(world, type, site, 'enemy').id);
+    }
+    if (v.defenderIds.length < VILLAGE_MAX_GUARDS) {
+      const g = spawnUnit(
+        world,
+        'raider',
+        { x: v.center.x + (nextInt(world, 5) - 2), y: v.center.y + 2 },
+        RAIDER_HP,
+      );
+      g.home = { ...v.center };
+      v.defenderIds.push(g.id);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

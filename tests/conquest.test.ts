@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Sim } from '../src/sim/sim';
 import { createWorld } from '../src/sim/world';
 import { canPlace, idx } from '../src/sim/grid';
-import { BUILDINGS, T_GRASS, VILLAGE_INCOME_INTERVAL, VILLAGE_RADIUS, VILLAGE_TYPES, MAP_W } from '../src/config';
+import { BUILDINGS, T_GRASS, VILLAGE_GROW_INTERVAL, VILLAGE_INCOME_INTERVAL, VILLAGE_RADIUS, VILLAGE_TYPES, MAP_W } from '../src/config';
 
 function run(sim: Sim, ticks: number): void {
   for (let i = 0; i < ticks; i++) {
@@ -33,6 +33,17 @@ describe('enemy villages & conquest', () => {
     expect(v.captured).toBe(true);
     for (const id of v.buildingIds) expect(sim.world.buildings.get(id)?.owner).toBe('player');
     expect(sim.world.unlocked).toContain(type.unlock);
+  });
+
+  it('living rivals: an uncaptured village builds up over time', () => {
+    const sim = new Sim(5);
+    const v = sim.world.villages[0];
+    const b0 = v.buildingIds.length;
+    const g0 = v.defenderIds.length;
+    run(sim, VILLAGE_GROW_INTERVAL * 3 + 5);
+    expect(v.captured).toBe(false);
+    expect(v.buildingIds.length).toBeGreaterThan(b0); // raised more buildings
+    expect(v.defenderIds.length).toBeGreaterThan(g0); // posted more guards
   });
 
   it('captured villages pay passive income', () => {
