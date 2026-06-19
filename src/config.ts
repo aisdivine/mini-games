@@ -328,12 +328,6 @@ export const VILLAGE_MAX_GUARDS = 8;
 export const GUARD_AGGRO = 8; // tiles; defenders engage intruders within this of home
 export const SOLDIER_AGGRO = 9; // tiles; your idle soldiers auto-engage enemies within this
 
-// The frontier line: your peaceful home is west of this column; enemy lands lie
-// to the east. Purely a visual/affordance marker — soldiers cross it freely to
-// invade. Sits clearly EAST of the home cluster (keep ~59-61, stockpile ~66-68,
-// map center 64) but west of the scattered frontier villages (>=28 tiles out).
-export const BORDER_X = 78;
-
 // Blacksmith standing buff to every player soldier while at least one stands.
 export const BLACKSMITH_DMG_MULT = 1.25; // +25% outgoing damage
 export const BLACKSMITH_DEF_MULT = 0.85; // -15% incoming damage
