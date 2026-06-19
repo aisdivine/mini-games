@@ -5,10 +5,10 @@
 import { RAID_AT_TICK, RAIDS_ENABLED, STARTING_GOLD } from '../config';
 import type { Building, Fish, Tree, Unit, World } from './world';
 
-// Bumped to 7: peaceful-home redesign — new support buildings (blacksmith /
-// stable / siege_workshop) in the BuildingType union and a frontierClearedShown
-// flag. Old saves predate these and can't be trusted into the new rules.
-const SAVE_VERSION = 7;
+// Bumped to 8: two-scene redesign — the home map dropped its enemy villages,
+// gained world.kind ('home'|'battle') + battlesWon (battlefield progression).
+// Only the home world is ever saved; battles are transient.
+const SAVE_VERSION = 8;
 
 interface SaveFile {
   version: number;
@@ -56,7 +56,8 @@ export function deserializeWorld(json: string): World | null {
       gold: w.gold ?? STARTING_GOLD,
       raidsEnabled: w.raidsEnabled ?? RAIDS_ENABLED,
       nextRaidTick: w.nextRaidTick ?? RAID_AT_TICK,
-      frontierClearedShown: w.frontierClearedShown ?? false,
+      kind: w.kind ?? 'home',
+      battlesWon: w.battlesWon ?? 0,
       stockpile: { wood: 0, wheat: 0, flour: 0, stone: 0, ...(w.stockpile as Partial<World['stockpile']>) },
       granaryFood: { bread: 0, apples: 0, meat: 0, fish: 0, ...(w.granaryFood as Partial<World['granaryFood']>) },
     };

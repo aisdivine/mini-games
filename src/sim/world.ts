@@ -9,9 +9,13 @@ import {
   MAP_W,
   MAP_H,
   POPULARITY_START,
+  BATTLE_BASE_ENEMIES,
+  BATTLE_ENEMIES_PER_LEVEL,
+  BATTLE_ENEMY_HP_PER_LEVEL,
   RAID_AT_TICK,
   RAIDER_HP,
   RAIDS_ENABLED,
+  SOLDIERS,
   STARTING_GOLD,
   STARTING_PEASANTS,
   STARTING_WOOD,
@@ -19,11 +23,6 @@ import {
   T_ROCK,
   T_WATER,
   TREE_CLEAR_RADIUS,
-  VILLAGE_GROW_INTERVAL,
-  VILLAGE_MAX_BUILDINGS,
-  VILLAGE_MAX_GUARDS,
-  VILLAGE_RADIUS,
-  VILLAGE_TYPES,
   TREE_CLUSTERS,
   TREE_PER_CLUSTER,
   TREE_WOOD,
@@ -41,6 +40,8 @@ export interface Vec2 {
   x: number;
   y: number;
 }
+
+export type WorldKind = 'home' | 'battle';
 
 export type ProductionState =
   | { kind: 'none' } // non-production buildings
@@ -101,18 +102,6 @@ export interface Unit {
   hp: number;
   attackCooldown: number;
   targetId: number | null; // combat target (building id)
-  /** Village-defender guard post; null for everyone else. Guards hold here and
-   *  only engage intruders nearby instead of marching on the keep. */
-  home: Vec2 | null;
-}
-
-export interface Village {
-  id: number;
-  typeKey: string; // VILLAGE_TYPES key
-  center: Vec2;
-  captured: boolean;
-  buildingIds: number[];
-  defenderIds: number[];
 }
 
 export interface Reservation {
@@ -153,8 +142,7 @@ export interface World {
   units: Map<number, Unit>;
   trees: Map<number, Tree>;
   fish: Map<number, Fish>;
-  villages: Village[];
-  unlocked: string[]; // elite SoldierTypes unlocked by conquest
+  unlocked: string[]; // elite SoldierTypes unlocked by home support buildings
   stockpile: Record<StockResource, number>;
   granaryFood: Record<FoodType, number>;
   gold: number;
@@ -169,8 +157,11 @@ export interface World {
   /** Tick the next auto-raid fires (reset whenever raids are switched on). */
   nextRaidTick: number;
   raid: RaidState;
-  /** One-shot guard for the "whole frontier conquered" banner. */
-  frontierClearedShown: boolean;
+  /** Which scene this world is: the peaceful home base, or a transient
+   *  battlefield (army vs army, no economy). Gates the sim tick + render. */
+  kind: WorldKind;
+  /** Battles won so far — drives enemy army scaling. Lives on the home world. */
+  battlesWon: number;
   outcome: 'playing' | 'won' | 'lost';
   outcomeReason: string;
   keepId: number;
@@ -189,7 +180,6 @@ export function createWorld(seed: number): World {
     units: new Map(),
     trees: new Map(),
     fish: new Map(),
-    villages: [],
     unlocked: [],
     stockpile: { wood: STARTING_WOOD, wheat: 0, flour: 0, stone: 0 },
     granaryFood: { bread: 8, apples: 6, meat: 0, fish: 0 },
@@ -203,7 +193,8 @@ export function createWorld(seed: number): World {
     raidsEnabled: RAIDS_ENABLED,
     nextRaidTick: RAID_AT_TICK,
     raid: { triggered: false, spawnedCount: 0 },
-    frontierClearedShown: false,
+    kind: 'home',
+    battlesWon: 0,
     outcome: 'playing',
     outcomeReason: '',
     keepId: 0,
@@ -224,124 +215,78 @@ export function createWorld(seed: number): World {
   }
 
   generateTerrain(world, cx, cy);
-  generateVillages(world, cx, cy);
   scatterTrees(world, cx, cy);
   return world;
 }
 
 // ---------------------------------------------------------------------------
-// Enemy villages: a handful of settlements (intact buildings + guards) out on
-// the frontier, away from the start and the open west band. Conquer them by
-// killing every guard (see combat.ts).
+// Battlefield world — a transient, bare scene for an army-vs-army fight. No
+// economy, no home buildings, no villages: just open grass with the player's
+// army on the west and a scaled enemy army on the east. The player's surviving
+// soldiers return home after; the dead are gone (see main.ts battle flow).
 // ---------------------------------------------------------------------------
 
-function clearTile(world: World, x: number, y: number): void {
-  if (x >= 0 && y >= 0 && x < MAP_W && y < MAP_H) world.terrain[idx(x, y)] = T_GRASS;
+export function createBattleWorld(seed: number, level: number, army: SoldierType[]): World {
+  const world = createBareWorld(seed);
+  world.kind = 'battle';
+  world.battlesWon = level; // carry the difficulty marker for HUD/scaling
+
+  // Player army musters on the west, spread into rows so they don't stack.
+  const wx = 12;
+  const wy = MAP_H >> 1;
+  army.forEach((role, i) => {
+    const col = i % 6;
+    const row = Math.floor(i / 6);
+    spawnUnit(world, role, { x: wx + row, y: wy - 9 + col * 3 }, SOLDIERS[role].hp);
+  });
+
+  // Enemy host masses on the east. Count + toughness scale with level.
+  const count = BATTLE_BASE_ENEMIES + level * BATTLE_ENEMIES_PER_LEVEL;
+  const hp = Math.round(RAIDER_HP * (1 + level * BATTLE_ENEMY_HP_PER_LEVEL));
+  const ex = MAP_W - 13;
+  const ey = MAP_H >> 1;
+  for (let i = 0; i < count; i++) {
+    const col = i % 6;
+    const row = Math.floor(i / 6);
+    spawnUnit(world, 'raider', { x: ex - row, y: ey - 9 + col * 3 }, hp);
+  }
+  return world;
 }
 
-function generateVillages(world: World, cx: number, cy: number): void {
-  const placed: Vec2[] = [];
-  for (const type of VILLAGE_TYPES) {
-    let v: Vec2 | null = null;
-    for (let tries = 0; tries < 80; tries++) {
-      // Eastern frontier only: clear of the start ring and the open west half
-      // (which the headless tests build into).
-      const x = 60 + nextInt(world, MAP_W - 72);
-      const y = 12 + nextInt(world, MAP_H - 24);
-      if (Math.hypot(x - cx, y - cy) < 28) continue; // keep clear of the start
-      if (world.terrain[idx(x, y)] !== T_GRASS) continue; // not in pond/mountain
-      if (placed.some((p) => Math.hypot(p.x - x, p.y - y) < 20)) continue;
-      v = { x, y };
-      break;
-    }
-    if (!v) continue;
-    placed.push(v);
-
-    // clear a patch of grass so the buildings + guards have room
-    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) clearTile(world, v.x + dx, v.y + dy);
-
-    const village: Village = {
-      id: world.nextId++,
-      typeKey: type.key,
-      center: { ...v },
-      captured: false,
-      buildingIds: [],
-      defenderIds: [],
-    };
-    // a fort: a central tower (their "castle") + a couple of huts, enemy-owned
-    const layout: { type: BuildingType; dx: number; dy: number }[] = [
-      { type: 'tower', dx: 0, dy: 0 },
-      { type: 'house', dx: -3, dy: 1 },
-      { type: 'granary', dx: 3, dy: -1 },
-    ];
-    for (const b of layout) {
-      const tile = { x: v.x + b.dx, y: v.y + b.dy };
-      if (!inFree(world, b.type, tile)) continue;
-      const built = placeBuildingRaw(world, b.type, tile, 'enemy');
-      village.buildingIds.push(built.id);
-    }
-    // guards spawn around the center, leashed to it
-    for (let i = 0; i < type.defenders; i++) {
-      const gx = v.x + (nextInt(world, 5) - 2);
-      const gy = v.y + 2 + (nextInt(world, 3) - 1);
-      const guard = spawnUnit(world, 'raider', { x: gx, y: gy }, RAIDER_HP);
-      guard.home = { ...v };
-      village.defenderIds.push(guard.id);
-    }
-    world.villages.push(village);
-  }
-}
-
-/** All footprint tiles in bounds, free, and on grass. */
-function inFree(world: World, type: BuildingType, tile: Vec2): boolean {
-  const def = BUILDINGS[type];
-  for (let dy = 0; dy < def.size.h; dy++) {
-    for (let dx = 0; dx < def.size.w; dx++) {
-      const x = tile.x + dx;
-      const y = tile.y + dy;
-      if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return false;
-      const i = idx(x, y);
-      if (world.occupancy[i] !== 0 || world.terrain[i] !== T_GRASS) return false;
-    }
-  }
-  return true;
-}
-
-const GROWTH_POOL: BuildingType[] = ['tower', 'house', 'market', 'granary', 'woodcutter'];
-
-/** A free 2×2-ish build site within a village's footprint radius. */
-function villageSite(world: World, center: Vec2, type: BuildingType): Vec2 | null {
-  for (let tries = 0; tries < 24; tries++) {
-    const x = center.x + nextInt(world, VILLAGE_RADIUS * 2 - 1) - (VILLAGE_RADIUS - 1);
-    const y = center.y + nextInt(world, VILLAGE_RADIUS * 2 - 1) - (VILLAGE_RADIUS - 1);
-    if (Math.hypot(x - center.x, y - center.y) > VILLAGE_RADIUS - 1) continue;
-    if (inFree(world, type, { x, y })) return { x, y };
-  }
-  return null;
-}
-
-/** Living rivals: every growth step, each uncaptured village raises one more
- *  building and posts another guard, up to caps. Called each tick. */
-export function growVillages(world: World): void {
-  if (world.tick === 0 || world.tick % VILLAGE_GROW_INTERVAL !== 0) return;
-  for (const v of world.villages) {
-    if (v.captured) continue;
-    if (v.buildingIds.length < VILLAGE_MAX_BUILDINGS) {
-      const type = GROWTH_POOL[v.buildingIds.length % GROWTH_POOL.length];
-      const site = villageSite(world, v.center, type);
-      if (site) v.buildingIds.push(placeBuildingRaw(world, type, site, 'enemy').id);
-    }
-    if (v.defenderIds.length < VILLAGE_MAX_GUARDS) {
-      const g = spawnUnit(
-        world,
-        'raider',
-        { x: v.center.x + (nextInt(world, 5) - 2), y: v.center.y + 2 },
-        RAIDER_HP,
-      );
-      g.home = { ...v.center };
-      v.defenderIds.push(g.id);
-    }
-  }
+/** A blank world: all-grass terrain, no buildings/units/villages, economy
+ *  inert. Shared base for the battlefield. */
+function createBareWorld(seed: number): World {
+  return {
+    tick: 0,
+    rngState: seed | 0,
+    gridVersion: 0,
+    occupancy: new Uint32Array(MAP_W * MAP_H),
+    terrain: new Uint8Array(MAP_W * MAP_H), // all grass
+    buildings: new Map(),
+    units: new Map(),
+    trees: new Map(),
+    fish: new Map(),
+    unlocked: [],
+    stockpile: { wood: 0, wheat: 0, flour: 0, stone: 0 },
+    granaryFood: { bread: 0, apples: 0, meat: 0, fish: 0 },
+    gold: 0,
+    reservations: [],
+    workerWanted: [],
+    popularity: POPULARITY_START, // inert — battle worlds skip updatePopulation
+    lastFoodDelta: 0,
+    nextEatTick: Number.MAX_SAFE_INTEGER,
+    nextImmigrationTick: Number.MAX_SAFE_INTEGER,
+    raidsEnabled: false,
+    nextRaidTick: Number.MAX_SAFE_INTEGER,
+    raid: { triggered: false, spawnedCount: 0 },
+    kind: 'battle',
+    battlesWon: 0,
+    outcome: 'playing',
+    outcomeReason: '',
+    keepId: 0,
+    campfireTile: { x: 0, y: 0 },
+    nextId: 1,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -587,7 +532,6 @@ export function spawnUnit(world: World, role: UnitRole, pos: Vec2, hp: number): 
     hp,
     attackCooldown: 0,
     targetId: null,
-    home: null,
   };
   world.units.set(unit.id, unit);
   return unit;

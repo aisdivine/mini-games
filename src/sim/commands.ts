@@ -155,7 +155,11 @@ export function applyCommand(world: World, cmd: Command, events: SimEvent[]): vo
         return;
       }
       if (ELITE_SOLDIERS.includes(cmd.soldier) && !world.unlocked.includes(cmd.soldier)) {
-        events.push({ type: 'rejected', reason: `${def.label} is locked — conquer its village to unlock` });
+        const src =
+          cmd.soldier === 'mangonel' ? 'a Siege Workshop'
+          : cmd.soldier === 'crossbowman' ? 'a Blacksmith'
+          : 'a Stable';
+        events.push({ type: 'rejected', reason: `${def.label} is locked — build ${src} to unlock` });
         return;
       }
       if (!canAfford(world, def.cost)) {
@@ -218,7 +222,10 @@ export function applyCommand(world: World, cmd: Command, events: SimEvent[]): vo
  *  re-placing a Stable does nothing if the unit is already unlocked. */
 function applyBuildingUnlocks(world: World, type: BuildingType, events: SimEvent[]): void {
   const grants: SoldierType[] =
-    type === 'stable' ? ['knight', 'camel_lancer'] : type === 'siege_workshop' ? ['mangonel'] : [];
+    type === 'stable' ? ['knight', 'camel_lancer']
+    : type === 'siege_workshop' ? ['mangonel']
+    : type === 'blacksmith' ? ['crossbowman']
+    : [];
   let unlockedAny = false;
   for (const s of grants) {
     if (!world.unlocked.includes(s)) {

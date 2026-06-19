@@ -28,6 +28,14 @@ export class Sim {
     w.tick++;
     for (const cmd of this.queue) applyCommand(w, cmd, this.events);
     this.queue.length = 0;
+    if (w.kind === 'battle') {
+      // A bare battlefield: no economy or buildings, just troop movement +
+      // combat. Skipping updatePopulation avoids the peasant-less "everyone
+      // left -> lost" check; battle win/lose is decided in main.ts by counts.
+      updateUnits(w, this.events);
+      updateCombat(w, this.events);
+      return;
+    }
     updateBuildings(w, this.events);
     updateUnits(w, this.events);
     updatePopulation(w, this.events);

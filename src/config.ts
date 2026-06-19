@@ -200,19 +200,20 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     type: 'barracks', label: 'Barracks', size: { w: 3, h: 3 }, costWood: 20, hp: 250,
     buildable: true, color: 0x9a6a42, height: 40,
   },
-  // Army support — these exist to help your soldiers conquer the frontier.
-  // Blacksmith: a standing buff to every player soldier (more attack, more armor).
+  // Army support — these arm the army you take to the battlefield.
+  // Blacksmith: a standing buff to every player soldier (more attack, more
+  // armor) and unlocks the Crossbowman.
   blacksmith: {
     type: 'blacksmith', label: 'Blacksmith', size: { w: 2, h: 2 }, costWood: 30, hp: 160,
     buildable: true, cost: { wood: 30, stone: 20 }, color: 0x6b6b75, height: 34,
   },
   // Stable: home-grown cavalry — building it unlocks Knight + Camel Lancer at the
-  // Barracks without needing to capture their villages first.
+  // Barracks (one of the support buildings that arm your battlefield army).
   stable: {
     type: 'stable', label: 'Stable', size: { w: 3, h: 2 }, costWood: 40, hp: 180,
     buildable: true, cost: { wood: 40, gold: 25 }, color: 0x8a6a44, height: 30,
   },
-  // Siege Workshop: unlocks the Mangonel for breaking enemy towers.
+  // Siege Workshop: unlocks the Mangonel — heavy splash for the battlefield.
   siege_workshop: {
     type: 'siege_workshop', label: 'Siege Workshop', size: { w: 3, h: 3 }, costWood: 50, hp: 200,
     buildable: true, cost: { wood: 50, stone: 30 }, color: 0x7a5a34, height: 36,
@@ -295,38 +296,11 @@ export function isSoldier(role: string): role is SoldierType {
   return Object.prototype.hasOwnProperty.call(SOLDIERS, role);
 }
 
-// ---------------------------------------------------------------------------
-// Enemy villages — scattered settlements you conquer by killing all their
-// defenders. On capture the buildings flip to you, their land opens for
-// building, you earn a passive income, and you unlock an elite soldier.
-// ---------------------------------------------------------------------------
-
-export interface VillageType {
-  key: string;
-  label: string;
-  income: { resource: 'gold' | 'wood' | 'stone' | 'food'; amount: number };
-  unlock: SoldierType; // elite unit unlocked on capture
-  defenders: number; // guard count
-}
-
-export const VILLAGE_TYPES: VillageType[] = [
-  { key: 'trade', label: 'Trade Post', income: { resource: 'gold', amount: 6 }, unlock: 'crossbowman', defenders: 3 },
-  { key: 'granary', label: 'Granary Village', income: { resource: 'food', amount: 6 }, unlock: 'knight', defenders: 4 },
-  { key: 'lumber', label: 'Lumber Camp', income: { resource: 'wood', amount: 8 }, unlock: 'camel_lancer', defenders: 3 },
-  { key: 'quarry', label: 'Quarry Town', income: { resource: 'stone', amount: 5 }, unlock: 'mangonel', defenders: 4 },
-];
-
-// Elite soldiers start locked; conquering the matching village unlocks them.
+// Elite soldiers start locked; they're unlocked by the home support buildings
+// (Stable → knight + camel_lancer, Siege Workshop → mangonel, Blacksmith →
+// crossbowman; see commands.applyBuildingUnlocks).
 export const ELITE_SOLDIERS: SoldierType[] = ['knight', 'crossbowman', 'camel_lancer', 'mangonel'];
-export const VILLAGE_RADIUS = 6; // no-build zone around an enemy village center
-export const VILLAGE_INCOME_INTERVAL = 200; // ticks (10s) between income payouts
-// Living rivals: uncaptured villages keep building (towers/huts) + posting more
-// guards over time, so the longer you leave one be, the tougher the fort.
-export const VILLAGE_GROW_INTERVAL = 1400; // ticks (~70s) between growth steps
-export const VILLAGE_MAX_BUILDINGS = 7;
-export const VILLAGE_MAX_GUARDS = 8;
-export const GUARD_AGGRO = 8; // tiles; defenders engage intruders within this of home
-export const SOLDIER_AGGRO = 9; // tiles; your idle soldiers auto-engage enemies within this
+export const SOLDIER_AGGRO = 9; // tiles; soldiers (both sides) auto-engage enemies within this
 
 // Blacksmith standing buff to every player soldier while at least one stands.
 export const BLACKSMITH_DMG_MULT = 1.25; // +25% outgoing damage
@@ -396,3 +370,16 @@ export const RAID_AT_TICK = 20 * 60 * 8; // 8 minutes in
 // Master switch. While false, raids never auto-trigger — peaceful city-builder
 // sandbox. The debug 'r' key still works for manual testing.
 export const RAIDS_ENABLED = false;
+
+// ---------------------------------------------------------------------------
+// Battlefield — the separate army-vs-army scene. The enemy host scales with the
+// number of battles already won (world.battlesWon).
+// ---------------------------------------------------------------------------
+
+export const BATTLE_BASE_ENEMIES = 6; // raiders in the first battle (level 0)
+export const BATTLE_ENEMIES_PER_LEVEL = 3; // extra raiders per prior victory
+export const BATTLE_ENEMY_HP_PER_LEVEL = 0.15; // +15% raider HP per level
+export const BATTLE_ENEMY_DMG_PER_LEVEL = 0.1; // +10% raider damage per level
+// Victory loot, scaled by level: base + per-level, per resource.
+export const BATTLE_LOOT_BASE = { gold: 20, wood: 30, stone: 15 };
+export const BATTLE_LOOT_PER_LEVEL = { gold: 10, wood: 15, stone: 8 };

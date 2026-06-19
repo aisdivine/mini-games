@@ -1,47 +1,62 @@
-# Stronghold-lite
+# The Land of Faaa Faaa Away
 
-A Stronghold Crusader-inspired isometric castle & economy sim — vertical slice.
-TypeScript + Vite + PixiJS v8; pure-TS simulation fully decoupled from rendering.
+An isometric castle-builder + army-battler, Stronghold-meets-Clash-of-Clans.
+TypeScript + Vite + PixiJS v8; a pure-TS simulation fully decoupled from rendering.
+
+Live: https://aisdivine.github.io/mini-games/land-of-faaa-faaa-away/
 
 ## Run
 
 ```bash
 npm install
-npm run dev      # → http://localhost:5173
+npm run dev      # → http://localhost:5173 (also on your LAN for phones)
 npm test         # headless sim tests (vitest)
 npm run build    # type-check + production build
 ```
 
-## How to play
+## The game
 
-Peaceful economy sandbox — raids are paused (`RAIDS_ENABLED = false`).
+Two scenes. Your **home** is a peaceful community — nothing ever attacks it.
+You grow an economy, train an army, then **March to Battle**: your troops fight
+an enemy army on a separate **battlefield**. Survivors come home with loot; the
+fallen are gone for good. Each victory makes the next enemy army bigger and
+tougher. Winning never ends the game; only your home town can fail (starvation).
 
-- **Economy:** build a Woodcutter (its peasant walks out to the nearest tree,
-  chops it, hauls the log back — trees deplete to stumps and regrow), then the
-  bread chain — Wheat Farm → Mill → Bakery → Granary. Each production building
-  binds one idle peasant who physically hauls goods through the stockpile.
-  Workers stay visible and animated while working.
-- **Food:** all food goes to the **Granary**. The fastest sources are single
-  buildings — an **Apple Orchard**, **Hunter's Hut**, or **Fisherman's Hut** —
-  so build one early instead of waiting on the whole bread chain. A **varied
-  diet** (bread + apples + meat + fish) gives a bigger popularity boost than any
-  single food.
-- **Fishing:** build a **Fisherman's Hut** near the **pond** (the blue water on
-  the eastern frontier). Its fisherman walks to the nearest shoal, casts from
-  the shore, and hauls fish back to the Granary. Shoals deplete and restock over
-  time, like trees — spread huts across the pond and stream for a steady catch.
-- **The land:** the map is a wide frontier with natural features — a rocky
-  **mountain** (impassable), a **stream**, and the fishing **pond**. You can't
-  build or walk on water or rock, so plan your layout (and walls) around them.
-- **Population:** peasants eat every 20s. Fed = popularity rises and
-  immigrants arrive (build Houses for capacity). Starving = popularity falls
-  and peasants leave. Popularity 0 = defeat.
-- **Status & upgrades:** hover any building for a live status tooltip (what it
-  makes, craft time, current activity). Click to select, then **Upgrade** it
-  with wood (up to Lv 9) to speed up production.
-- **Defense:** drag Walls, place Towers (range bonus for adjacent archers),
-  recruit Archers at the keep and position them with click-to-move.
-- **Win:** kill every raider. **Lose:** keep destroyed or popularity collapse.
+### Home — build & grow
+
+- **Economy:** a Woodcutter's peasant walks to the nearest tree, chops it, hauls
+  the log back (trees deplete to stumps and regrow); then the bread chain —
+  Wheat Farm → Mill → Bakery → Granary. Each production building binds one idle
+  peasant who physically hauls goods through the stockpile, visible and animated.
+- **Food & population:** all food goes to the **Granary**; the fastest sources
+  are single buildings — **Apple Orchard**, **Hunter's Hut**, **Fisherman's Hut**
+  (build near the pond). A **varied diet** boosts popularity more than any one
+  food. Peasants eat every 20s: fed → popularity rises and immigrants arrive
+  (build Houses for capacity); starving → popularity falls and people leave.
+  **Popularity 0 = you lose.**
+- **Gold & the Market:** sell surplus / buy shortfalls for gold (buy > sell).
+- **The land:** a rocky **mountain** (mine it with a **Quarry**), a **stream**,
+  and a fishing **pond**. You can't build or walk on water or rock.
+
+### Army — train & arm
+
+- **Barracks** trains soldiers (spearman, man-at-arms, pikeman, archer, medic,
+  standard-bearer). Costs draw on wood / stone / gold / food.
+- **Support buildings arm the army:** **Blacksmith** (+25% damage / −15% damage
+  taken to all your troops, and unlocks the **Crossbowman**), **Stable**
+  (unlocks **Knight** + **Camel Lancer**), **Siege Workshop** (unlocks the
+  **Mangonel** — heavy splash). Elites are locked until you build their source.
+
+### Battle — march & fight
+
+- **March to Battle** takes your whole standing army to a fresh battlefield:
+  your troops muster west, a scaled enemy host masses east and advances.
+- Fight it out with full RTS control — **box-select** troops, **right-click** to
+  maneuver and focus. Win by wiping the enemy army.
+- **Win:** survivors return home + loot (gold/wood/stone), and the battle counter
+  climbs (next enemy is bigger/tougher). **Lose:** your army is gone — rebuild
+  and try again. **Retreat** anytime: survivors come home, no loot. No game-over
+  either way; your home is untouched while you fight.
 
 ### Controls
 
@@ -50,37 +65,45 @@ Peaceful economy sandbox — raids are paused (`RAIDS_ENABLED = false`).
 | Left-drag / arrows | Pan camera |
 | Scroll wheel | Zoom to cursor |
 | Build menu + click | Place building (drag for walls) |
+| Left-drag box | Select your soldiers |
+| Right-click ground | Move/focus selected soldiers |
 | Right-click / Space | Cancel mode, clear selection |
-| Click unit/building | Select (archers: click ground to move) |
+| Click unit/building | Select |
 | `1` `2` `3` | Speed 1× / 2× / 4× |
-| `p` | Pause |
-| `g` | Debug: show unit paths |
-| `w` `r` | Cheats: +100 wood, start raid |
+| `p` | Pause · `c` Re-center · `g` Debug paths |
+| `w` | Cheat: +100 wood |
 
-Autosaves to localStorage every 30s; "New Game" wipes it.
+Autosaves the **home** world to localStorage every 30s (battles are transient and
+never saved — reloading mid-battle keeps your army and abandons the fight).
+"New Game" wipes the save.
 
 ## Architecture
 
-- `src/sim/` — deterministic simulation, **zero pixi imports**, runs headless
-  in vitest. Fixed 20 Hz tick; seeded RNG; plain serializable world struct.
-- `src/art/` — clean flat-shaded isometric vector art, generated as SVG from
-  typed primitives (`flat.ts`: auto three-tone iso boxes, cylinders,
-  crenellation cubes, flags, soft ground shadows — solid fills, no outlines).
-  Every object resolves to a `VectorAsset` by its `ArtId`
-  (`BuildingType | UnitRole`); adding art for a new building is one spec
-  entry in `buildings.ts`. Fully deterministic.
-- `src/art/v2/` — external art pack SVGs (units, tree, stump, icons) per the
-  art bible in `docs/ART_SPEC.md`. Units are recolored per villager at load
-  (`render/unitTextures.ts`: skin tone from id, tunic from job) and the resource
-  icons drive the HUD. Buildings are still code-drawn (`art/buildings.ts`)
-  pending the full 13-building v2 set, then they swap in as one consistent set.
-- `src/render/` — PixiJS views reconciled against the world by entity id
-  (`sceneSync.ts`). `assets.ts` rasterizes the SVGs to textures at 2× once
-  at startup; views are sprites positioned by each asset's anchor. Living
-  detail (`views/buildingAnim.ts`) is drawn into a per-building `Graphics`
-  overlay each frame from a render clock — turning mill sails, chimney smoke,
-  waving flags, flickering campfire, swaying wheat, sawdust — independent of
-  the sim, so it animates even while paused.
+Two `Sim`/`World` instances coexist: `homeSim` (peaceful base) and, during a
+fight, `battleSim` (army vs army). `main.ts` keeps `sim` pointing at the active
+scene and rebuilds the world-bound render objects on a switch.
+
+- `src/sim/` — deterministic simulation, **zero pixi imports**, runs headless in
+  vitest. Fixed 20 Hz tick; seeded RNG; plain serializable `World` struct.
+  - `world.ts` — the `World` struct, `createWorld` (home: keep, peasants,
+    terrain, trees) and `createBattleWorld(seed, level, army)` (bare grass field,
+    your army west + scaled raiders east). `World.kind` is `'home' | 'battle'`.
+  - `sim.ts` — fixed tick order; battle worlds skip economy systems
+    (`commands → units → combat` only).
+  - `combat.ts` — role-based combat: your `SoldierType` troops auto-engage
+    `raider` enemies and vice-versa (`fieldAdvance` is the battlefield enemy AI).
+  - `commands.ts`, `buildings.ts`, `units.ts`, `population.ts`, `economy.ts`,
+    `pathfinding.ts`, `grid.ts`, `save.ts` (versioned localStorage).
+- `src/config.ts` — every tunable: buildings, soldier stats, battle scaling, loot.
+- `src/art/` — isometric SVG art. The **v2 pack** (`art/v2/pack`) holds building
+  bases + animated layers; `art/buildings.ts` and `art/decor.ts` register each
+  asset to an `ArtId`. Adding a building's art = drop a `*_base.svg` + one line.
+- `src/render/` — PixiJS views reconciled against the active world by entity id
+  (`sceneSync.ts`, with `reset()` to tear down on a scene switch). `assets.ts`
+  rasterizes SVGs to textures once; animated building layers (flags, smoke,
+  sails, forge smoke) and combat FX are driven off a render clock, independent of
+  the sim. `groundView`/`waterView` bake per-world terrain and are rebuilt on a
+  switch; camera/atmosphere/ambient/HUD are world-agnostic and reused.
 - `src/input/`, `src/ui/` — pointer/hotkeys → command queue; DOM HUD.
-- `src/main.ts` — composition root: game loop (fixed-timestep sim,
-  interpolated render), mode state, save/load.
+- `src/main.ts` — composition root: scene switching (`setScene`/`enterBattle`/
+  `endBattle`), fixed-timestep game loop with interpolated render, save/load.

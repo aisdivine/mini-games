@@ -1,4 +1,4 @@
-import { BUILDINGS, MAP_W, MAP_H, T_GRASS, VILLAGE_RADIUS, type BuildingDef } from '../config';
+import { BUILDINGS, MAP_W, MAP_H, T_GRASS, type BuildingDef } from '../config';
 import type { Vec2, World } from './world';
 
 export function idx(tx: number, ty: number): number {
@@ -31,13 +31,6 @@ export function canPlace(world: World, def: BuildingDef, tile: Vec2): boolean {
   // Access tile: just outside the east corner, orthogonally adjacent.
   if (def.recipe || def.type === 'keep' || def.type === 'stockpile' || def.type === 'granary') {
     if (!isPassable(world, tile.x + w, tile.y + h - 1)) return false;
-  }
-  // No building inside an uncaptured enemy village's territory.
-  const fcx = tile.x + (w - 1) / 2;
-  const fcy = tile.y + (h - 1) / 2;
-  for (const v of world.villages) {
-    if (v.captured) continue;
-    if (Math.hypot(fcx - v.center.x, fcy - v.center.y) <= VILLAGE_RADIUS) return false;
   }
   return true;
 }

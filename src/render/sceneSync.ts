@@ -41,7 +41,6 @@ export class SceneSync {
   private treeViews = new Map<number, TreeView>();
   private fishViews = new Map<number, FishView>();
   private reedViews: { c: Container; phase: number }[] = [];
-  private frontierFlags = new Map<number, Container>(); // village id -> banner
   private sceneryBuilt = false;
   private night = 0; // 0..1 day/night amount, for window glow
   private effects: Effect[] = [];
@@ -79,7 +78,6 @@ export class SceneSync {
     this.animateReeds();
     this.syncTrees(world);
     this.syncFish(world);
-    this.syncFrontier(world);
     this.syncBuildings(world);
     this.syncUnits(world, alpha);
     this.handleEvents(world, events);
@@ -132,38 +130,30 @@ export class SceneSync {
     }
 
     this.buildReeds(world);
-    this.buildFrontier(world);
   }
 
-  /** A banner planted at each enemy land marking it as an invasion target. Sits
-   *  at the village's home-facing (south-west) approach so the flags point you
-   *  to where to march. Each flag hides once its village is captured (see
-   *  syncFrontier), so the remaining flags always = lands left to conquer. */
-  private buildFrontier(world: World): void {
-    const entry = this.art.get('frontierPost');
-    if (!entry) return;
-    for (const v of world.villages) {
-      const sprite = new Sprite(entry.texture);
-      sprite.position.set(-entry.anchor.x, -entry.anchor.y);
-      const c = new Container();
-      c.addChild(sprite);
-      const fx = v.center.x - 2; // a couple tiles toward home, clear of the buildings
-      const fy = v.center.y + 2;
-      const p = tileToScreen(fx + 0.5, fy + 0.5);
-      c.position.set(p.x, p.y);
-      c.zIndex = fx + fy + 0.5;
-      c.visible = !v.captured;
-      this.entityLayer.addChild(c);
-      this.frontierFlags.set(v.id, c);
-    }
-  }
-
-  /** Hide a land's banner the moment it's captured — flags = remaining targets. */
-  private syncFrontier(world: World): void {
-    for (const v of world.villages) {
-      const c = this.frontierFlags.get(v.id);
-      if (c) c.visible = !v.captured;
-    }
+  /** Tear down every display object built for the current world so the next
+   *  `update(newWorld, …)` rebuilds from scratch — used when switching scenes
+   *  (home <-> battlefield). Pixi children created here are destroyed; the
+   *  shared layers themselves are kept. */
+  reset(): void {
+    for (const v of this.buildingViews.values()) v.container.destroy({ children: true });
+    for (const v of this.unitViews.values()) v.container.destroy({ children: true });
+    for (const v of this.treeViews.values()) v.container.destroy({ children: true });
+    for (const v of this.fishViews.values()) v.container.destroy({ children: true });
+    for (const r of this.reedViews) r.c.destroy({ children: true });
+    this.buildingViews.clear();
+    this.unitViews.clear();
+    this.treeViews.clear();
+    this.fishViews.clear();
+    this.reedViews = [];
+    this.chopPhase.clear();
+    // Any mountain/scenery sprites were added straight to entityLayer; drop them
+    // too so the new world's terrain decor doesn't stack on the old.
+    this.entityLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.effects.forEach((e) => e.g.destroy());
+    this.effects = [];
+    this.sceneryBuilt = false;
   }
 
   /** Reed clumps on the shore — grass tiles touching water. Deterministic

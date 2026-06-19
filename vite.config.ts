@@ -13,5 +13,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    // Several sim tests fast-forward thousands of deterministic ticks (raids,
+    // pathfinding, full battles). They're well under a second each in isolation
+    // but can exceed the 5s default under parallel CPU contention.
+    testTimeout: 20000,
   },
 } as Parameters<typeof defineConfig>[0]);

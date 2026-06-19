@@ -7,10 +7,10 @@ import {
   ARCHER_TOWER_RANGE_BONUS,
   AURA_DAMAGE_MULT,
   AURA_RADIUS,
+  BATTLE_ENEMY_DMG_PER_LEVEL,
   BLACKSMITH_DEF_MULT,
   BLACKSMITH_DMG_MULT,
   BUILDINGS,
-  GUARD_AGGRO,
   HEAL_AMOUNT,
   isSoldier,
   MANGONEL_SPLASH,
@@ -21,8 +21,6 @@ import {
   RAIDER_HP,
   SOLDIER_AGGRO,
   SOLDIERS,
-  VILLAGE_INCOME_INTERVAL,
-  VILLAGE_TYPES,
   type SoldierDef,
   type SoldierType,
 } from '../config';
@@ -62,51 +60,6 @@ export function updateCombat(world: World, events: SimEvent[]): void {
         events.push({ type: 'fallen', x: unit.pos.x, y: unit.pos.y, enemy: unit.role === 'raider' });
       }
     }
-  }
-
-  checkCaptures(world, events);
-  payIncome(world);
-}
-
-// A village is captured once every one of its defenders is dead. Its buildings
-// flip to you, the elite unit it guards unlocks, and its income starts.
-function checkCaptures(world: World, events: SimEvent[]): void {
-  for (const v of world.villages) {
-    if (v.captured) continue;
-    if (v.defenderIds.some((id) => world.units.has(id))) continue;
-    v.captured = true;
-    for (const id of v.buildingIds) {
-      const b = world.buildings.get(id);
-      if (b) b.owner = 'player';
-    }
-    const type = VILLAGE_TYPES.find((t) => t.key === v.typeKey)!;
-    if (!world.unlocked.includes(type.unlock)) world.unlocked.push(type.unlock);
-    events.push({
-      type: 'message',
-      text: `🏳 Captured ${type.label}! +${type.income.amount} ${type.income.resource}/10s · unlocked ${type.unlock.replace('_', ' ')}`,
-    });
-  }
-  // Whole-frontier banner — a one-time celebration, never a game-over. The game
-  // keeps running after every conquest; this just marks the campaign complete.
-  if (
-    !world.frontierClearedShown &&
-    world.villages.length > 0 &&
-    world.villages.every((v) => v.captured)
-  ) {
-    world.frontierClearedShown = true;
-    events.push({ type: 'message', text: '🏆 The whole frontier is yours! Your realm reigns in peace.' });
-  }
-}
-
-// Passive income from captured villages, paid on an interval.
-function payIncome(world: World): void {
-  if (world.tick % VILLAGE_INCOME_INTERVAL !== 0) return;
-  for (const v of world.villages) {
-    if (!v.captured) continue;
-    const inc = VILLAGE_TYPES.find((t) => t.key === v.typeKey)!.income;
-    if (inc.resource === 'gold') world.gold += inc.amount;
-    else if (inc.resource === 'food') world.granaryFood.bread += inc.amount;
-    else world.stockpile[inc.resource] += inc.amount;
   }
 }
 
@@ -198,8 +151,8 @@ function updateSoldier(world: World, unit: Unit, events: SimEvent[]): void {
     return;
   }
   const target = nearestRaider(world, unit);
-  // Hold position unless an enemy is close — so idle troops don't wander off to
-  // distant villages; march them in to provoke the guards.
+  // Hold position unless an enemy is close — so idle troops don't wander off;
+  // on the battlefield the enemy advances into range on its own.
   if (!target || dist2(unit, target) > SOLDIER_AGGRO) return;
   const ranged = def.range > 1.9;
   const range = def.range + (ranged && nearTower(world, unit) ? ARCHER_TOWER_RANGE_BONUS : 0);
@@ -249,36 +202,32 @@ function nearTower(world: World, archer: Unit): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Raiders
+// Raiders — the enemy. On the home map they only appear via the debug startRaid
+// (they march on the keep); on the battlefield they advance on your army.
 // ---------------------------------------------------------------------------
 
-// Village defender: hold near home; chase + hit intruders within aggro of home;
-// drift back otherwise. Never marches on the keep.
-function guardPost(world: World, raider: Unit, events: SimEvent[]): void {
-  const home = raider.home!;
+// Battlefield enemy AI: chase the nearest soldier and hit it in melee. Damage
+// ramps with battlesWon so later battles bite harder.
+function fieldAdvance(world: World, raider: Unit, events: SimEvent[]): void {
   const foe = nearestSoldier(world, raider);
-  if (foe && Math.hypot(foe.pos.x - home.x, foe.pos.y - home.y) <= GUARD_AGGRO) {
-    if (dist2(raider, foe) <= 1.7) {
-      raider.path = null;
-      if (raider.attackCooldown === 0) {
-        raider.attackCooldown = RAIDER_COOLDOWN_TICKS;
-        foe.hp -= RAIDER_DAMAGE * (hasBlacksmith(world) ? BLACKSMITH_DEF_MULT : 1);
-        events.push({ type: 'hit', x: foe.pos.x, y: foe.pos.y, kind: 'melee' });
-      }
-    } else {
-      moveToward(world, raider, foe.pos);
+  if (!foe) return;
+  if (dist2(raider, foe) <= 1.7) {
+    raider.path = null;
+    if (raider.attackCooldown === 0) {
+      raider.attackCooldown = RAIDER_COOLDOWN_TICKS;
+      foe.hp -= RAIDER_DAMAGE * (1 + world.battlesWon * BATTLE_ENEMY_DMG_PER_LEVEL);
+      events.push({ type: 'hit', x: foe.pos.x, y: foe.pos.y, kind: 'melee' });
     }
-    return;
-  }
-  if (Math.hypot(raider.pos.x - home.x, raider.pos.y - home.y) > 1.6) {
-    moveToward(world, raider, home);
+  } else {
+    moveToward(world, raider, foe.pos);
   }
 }
 
 function updateRaider(world: World, raider: Unit, events: SimEvent[]): void {
-  // Village guards hold their post and only engage intruders near home.
-  if (raider.home) {
-    guardPost(world, raider, events);
+  // Battlefield: no buildings to siege — advance on and attack the nearest
+  // soldier, mirroring the player troops' auto-engage. Damage scales with level.
+  if (world.kind === 'battle') {
+    fieldAdvance(world, raider, events);
     return;
   }
 

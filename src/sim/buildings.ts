@@ -4,13 +4,12 @@
 
 import { FISH_STOCK, TREE_WOOD } from '../config';
 import type { SimEvent } from './events';
-import { growVillages, type World } from './world';
+import type { World } from './world';
 
 export function updateBuildings(world: World, _events: SimEvent[]): void {
   assignWorkers(world);
   regrowTrees(world);
   restockFish(world);
-  growVillages(world);
 }
 
 // Stumps grow back into trees after their regrow timer, keeping the forest

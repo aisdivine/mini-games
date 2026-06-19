@@ -2,11 +2,17 @@
 
 import {
   ARCHER_COST_WOOD,
+  BATTLE_BASE_ENEMIES,
+  BATTLE_ENEMIES_PER_LEVEL,
+  BATTLE_LOOT_BASE,
+  BATTLE_LOOT_PER_LEVEL,
   BUILDINGS,
   EDGE_PAN_MARGIN,
   EDGE_PAN_SPEED,
   ELITE_SOLDIERS,
   isSoldier,
+  MAP_H,
+  MAP_W,
   MARKET_GOODS,
   MAX_BUILDING_LEVEL,
   SIM_DT_MS,
@@ -25,7 +31,7 @@ import { canPlace, isPassable } from './sim/grid';
 import { housingCapacity, populationCount } from './sim/population';
 import { resourceCount } from './sim/economy';
 import { deserializeWorld, serializeWorld } from './sim/save';
-import { buildingAt, type Building, type Unit, type Vec2 } from './sim/world';
+import { buildingAt, createBattleWorld, spawnUnit, type Building, type Unit, type Vec2, type World } from './sim/world';
 import { createApp } from './render/app';
 import { loadArtTextures } from './render/assets';
 import { loadBuildingLayers } from './render/buildingLayers';
@@ -125,10 +131,15 @@ async function start(): Promise<void> {
   document.body.insertAdjacentHTML('afterbegin', iconsSvg);
   const hotkeys = new Hotkeys();
 
-  // Sim: resume the autosave if present, else a fresh world.
+  // Sim: resume the autosave if present, else a fresh world. `sim` always points
+  // at the ACTIVE scene — the home base normally, the battlefield during a fight.
+  // homeSim is kept alive (frozen) while battleSim runs, then restored.
   const saved = localStorage.getItem(SAVE_KEY);
   const loadedWorld = saved ? deserializeWorld(saved) : null;
-  const sim = new Sim(Date.now() & 0x7fffffff, loadedWorld ?? undefined);
+  const homeSim = new Sim(Date.now() & 0x7fffffff, loadedWorld ?? undefined);
+  let sim = homeSim;
+  let battleSim: Sim | null = null;
+  const inBattle = (): boolean => sim.world.kind === 'battle';
   if (loadedWorld) setTimeout(() => hud.showMessage('Game resumed from autosave'), 300);
 
   const [art, unitTex, buildingLayers, lifeTex, combatFx] = await Promise.all([
@@ -138,9 +149,9 @@ async function start(): Promise<void> {
     loadAmbientLife(),
     loadCombatFx(),
   ]);
-  const groundView = createGroundView(sim.world);
+  let groundView = createGroundView(sim.world);
   layers.ground.addChild(groundView);
-  const water = new WaterView(sim.world);
+  let water = new WaterView(sim.world);
   layers.ground.addChild(water.g);
   const overlay = new OverlayView();
   layers.overlay.addChild(overlay.container);
@@ -176,11 +187,14 @@ async function start(): Promise<void> {
   applyAutoMode();
   setInterval(applyAutoMode, 60_000); // follow the day↔night boundary while playing
 
-  // Restore default zoom and re-center the camera on the keep.
+  // Restore default zoom and re-center the camera on the keep (home) or the
+  // middle of the map (battlefield, which has no keep).
   function resetView(): void {
     layers.world.scale.set(1);
     const keep = sim.world.buildings.get(sim.world.keepId);
-    const c = keep ? tileToScreen(keep.tile.x + 1.5, keep.tile.y + 1.5) : { x: 0, y: 0 };
+    const c = keep
+      ? tileToScreen(keep.tile.x + 1.5, keep.tile.y + 1.5)
+      : tileToScreen(MAP_W / 2, MAP_H / 2);
     camera.centerOn(c.x, c.y, app.screen.width, app.screen.height);
   }
   resetView();
@@ -210,11 +224,89 @@ async function start(): Promise<void> {
   }
 
   function saveGame(): void {
-    if (sim.world.outcome !== 'playing') return;
+    if (inBattle() || sim.world.outcome !== 'playing') return; // never persist a battle
     localStorage.setItem(SAVE_KEY, serializeWorld(sim.world));
     autosaveTimer = 0; // restart the autosave countdown from this manual save
     hud.showMessage('💾 Game saved');
   }
+
+  // --- Scene switching (home <-> battlefield) -------------------------------
+  // Rebuild the world-bound render objects (ground, water) and reset the entity
+  // reconciler for the incoming world; everything else (camera, HUD, atmosphere,
+  // ambient) is world-agnostic and reused.
+  function setScene(world: World): void {
+    layers.ground.removeChild(groundView);
+    groundView.destroy();
+    layers.ground.removeChild(water.g);
+    water.g.destroy();
+    groundView = createGroundView(world);
+    layers.ground.addChild(groundView);
+    water = new WaterView(world);
+    layers.ground.addChild(water.g);
+    sceneSync.reset();
+    selection = { kind: 'none' };
+    setMode({ kind: 'select' });
+    resetView();
+  }
+
+  // March your trained army out to a fresh battlefield. They leave home (removed
+  // from the home world) and muster on the west; a scaled enemy host spawns east.
+  function enterBattle(): void {
+    if (inBattle()) return;
+    const roles = [...homeSim.world.units.values()]
+      .filter((u) => isSoldier(u.role))
+      .map((u) => u.role as SoldierType);
+    if (roles.length === 0) {
+      hud.showMessage('✋ Train some soldiers first, then march to battle.');
+      return;
+    }
+    for (const u of [...homeSim.world.units.values()]) {
+      if (isSoldier(u.role)) homeSim.world.units.delete(u.id);
+    }
+    const level = homeSim.world.battlesWon;
+    const seed = Date.now() & 0x7fffffff;
+    battleSim = new Sim(seed, createBattleWorld(seed, level, roles));
+    sim = battleSim;
+    setScene(sim.world);
+    hud.showMessage(`⚔ Battle ${level + 1} — defeat the enemy army! (${roles.length} vs ${enemyCount(level)})`);
+  }
+
+  // Resolve a battle: bring survivors home, award loot on victory, return to the
+  // home scene. Never a game-over — losing just costs you the army.
+  function endBattle(victory: boolean, retreated = false): void {
+    if (!battleSim) return;
+    const survivors = [...battleSim.world.units.values()]
+      .filter((u) => isSoldier(u.role))
+      .map((u) => u.role as SoldierType);
+    const w = homeSim.world;
+    const rally = w.buildings.get(w.keepId)?.accessTile ?? w.campfireTile;
+    survivors.forEach((role, i) => {
+      spawnUnit(w, role, { x: rally.x + (i % 5), y: rally.y + Math.floor(i / 5) }, SOLDIERS[role].hp);
+    });
+    if (victory) {
+      const lvl = w.battlesWon;
+      w.gold += BATTLE_LOOT_BASE.gold + lvl * BATTLE_LOOT_PER_LEVEL.gold;
+      w.stockpile.wood += BATTLE_LOOT_BASE.wood + lvl * BATTLE_LOOT_PER_LEVEL.wood;
+      w.stockpile.stone += BATTLE_LOOT_BASE.stone + lvl * BATTLE_LOOT_PER_LEVEL.stone;
+      w.battlesWon++;
+    }
+    sim = homeSim;
+    battleSim = null;
+    setScene(sim.world);
+    if (victory) {
+      hud.showMessage(`🏆 Victory! ${survivors.length} troops returned home with loot.`);
+    } else if (retreated) {
+      hud.showMessage(`🏳 Retreated — ${survivors.length} troops made it home.`);
+    } else {
+      hud.showMessage('💀 Defeat — your army was wiped out. Rebuild and try again.');
+    }
+    if (homeSim.world.outcome === 'playing') {
+      localStorage.setItem(SAVE_KEY, serializeWorld(homeSim.world));
+    }
+  }
+
+  const enemyCount = (level: number): number =>
+    BATTLE_BASE_ENEMIES + level * BATTLE_ENEMIES_PER_LEVEL;
 
   // --- Build menu -----------------------------------------------------------
   hud.buildMenu(
@@ -226,20 +318,31 @@ async function start(): Promise<void> {
       })),
       { id: 'wall', label: `Wall (${BUILDINGS.wall.costWood}/tile)`, hint: 'Click-drag to draw' },
       { id: 'archer', label: `Archer (${ARCHER_COST_WOOD})`, hint: 'Recruited at the keep' },
+      { id: 'battle', label: '⚔ March to Battle', hint: 'Take your whole army to fight an enemy army' },
       { id: 'demolish', label: 'Demolish', hint: 'Click a building to remove it (50% refund)' },
-      { id: 'resetview', label: 'Reset View', hint: 'Re-center on the keep (Home / c)' },
+      { id: 'resetview', label: 'Reset View', hint: 'Re-center the camera (Home / c)' },
       { id: 'save', label: '💾 Save', hint: 'Save your city now (also autosaves every 30s · S)' },
       { id: 'newgame', label: 'New Game' },
     ],
     (id) => {
+      // Battle / retreat work in both scenes; camera reset is always allowed.
+      if (id === 'battle') {
+        if (inBattle()) endBattle(false, true);
+        else enterBattle();
+        return;
+      }
+      if (id === 'resetview') {
+        resetView();
+        return;
+      }
+      // Everything else is home-only — building on the battlefield is meaningless.
+      if (inBattle()) return;
       if (id === 'archer') {
         sim.enqueue({ type: 'recruitArcher' });
       } else if (id === 'demolish') {
         setMode(mode.kind === 'demolish' ? { kind: 'select' } : { kind: 'demolish' });
       } else if (id === 'wall') {
         setMode(mode.kind === 'wall' ? { kind: 'select' } : { kind: 'wall' });
-      } else if (id === 'resetview') {
-        resetView();
       } else if (id === 'save') {
         saveGame();
       } else if (id === 'newgame') {
@@ -494,7 +597,7 @@ async function start(): Promise<void> {
   let lastH = app.screen.height;
   // Persist when the tab is backgrounded so progress survives closing it while away.
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && sim.world.outcome === 'playing') {
+    if (document.hidden && !inBattle() && sim.world.outcome === 'playing') {
       localStorage.setItem(SAVE_KEY, serializeWorld(sim.world));
     }
   });
@@ -530,6 +633,19 @@ async function start(): Promise<void> {
       while (steps-- > 0 && sim.world.outcome === 'playing') sim.tick();
     }
 
+    // Battle resolution: army vs army, decided by who's left standing. endBattle
+    // swaps `sim` back to the home scene, so the rest of this frame renders home.
+    if (battleSim && sim === battleSim) {
+      let enemies = 0;
+      let troops = 0;
+      for (const u of sim.world.units.values()) {
+        if (u.role === 'raider') enemies++;
+        else if (isSoldier(u.role)) troops++;
+      }
+      if (enemies === 0) endBattle(true);
+      else if (troops === 0) endBattle(false);
+    }
+
     // After a long catch-up, only surface a game-over (don't flood toasts), and
     // persist the fast-forwarded world.
     const drained = sim.drainEvents();
@@ -542,7 +658,7 @@ async function start(): Promise<void> {
       localStorage.removeItem(SAVE_KEY);
       hud.showGameOver(sim.world.outcome, sim.world.outcomeReason, newGame);
     }
-    if (caughtUp && sim.world.outcome === 'playing') {
+    if (caughtUp && !inBattle() && sim.world.outcome === 'playing') {
       localStorage.setItem(SAVE_KEY, serializeWorld(sim.world));
     }
     renderClock += ticker.deltaMS;
@@ -560,11 +676,11 @@ async function start(): Promise<void> {
     updateOverlays();
     updateHud();
 
-    // Autosave on wall-clock time.
+    // Autosave on wall-clock time (home scene only — battles are transient).
     autosaveTimer += ticker.deltaMS;
     if (autosaveTimer >= AUTOSAVE_MS) {
       autosaveTimer = 0;
-      if (sim.world.outcome === 'playing') {
+      if (!inBattle() && sim.world.outcome === 'playing') {
         localStorage.setItem(SAVE_KEY, serializeWorld(sim.world));
       }
     }
@@ -576,7 +692,8 @@ async function start(): Promise<void> {
   // when the tab is visible. Browsers throttle background timers, so it advances
   // in coarse steps and the rAF loop fully catches up the moment you return.
   setInterval(() => {
-    if (!document.hidden || paused || sim.world.outcome !== 'playing') return;
+    // Home scene only — never advance or persist a transient battle in the background.
+    if (!document.hidden || paused || inBattle() || sim.world.outcome !== 'playing') return;
     const now = Date.now();
     acc += Math.min(now - lastWall, CATCHUP_MAX_MS);
     lastWall = now;
@@ -692,14 +809,42 @@ async function start(): Promise<void> {
 
   function updateHud(): void {
     const w = sim.world;
-    const pop = populationCount(w);
-    const housing = housingCapacity(w);
     // play-control labels
     hud.setButtonLabel('pause', paused ? '▶' : '⏸', paused ? 'Resume (P)' : 'Pause (P)');
     hud.setButtonLabel('speed', `${speed}×`, 'Cycle game speed (1/2/3)');
     const icon = (id: string): string => `<svg class="hud-icon"><use href="#${id}"/></svg>`;
     // data-tip drives the on-theme hover tooltip (see the top-bar listener).
     const t = (s: string): string => ` data-tip="${s}"`;
+
+    let troops = 0;
+    let enemies = 0;
+    for (const u of w.units.values()) {
+      if (isSoldier(u.role)) troops++;
+      else if (u.role === 'raider') enemies++;
+    }
+
+    if (inBattle()) {
+      hud.setButtonLabel('battle', '🏳 Retreat', 'Return home now — survivors come back, but no loot');
+      hud.setTopBar(
+        [
+          `<span class="stat"${t('You are on the battlefield. Wipe out the enemy army to win; if your whole army falls you retreat empty-handed. Home is safe meanwhile.')}>⚔ Battle ${w.battlesWon + 1}</span>`,
+          `<span class="stat"${t('Your troops still standing. Box-select and right-click to maneuver them.')}>🛡 your army: ${troops}</span>`,
+          `<span class="stat"${t('Enemy troops still standing.')}>💀 enemy: ${enemies}</span>`,
+          `<span class="stat"${t('Game speed — 1/2/3 to change, P to pause.')}>${paused ? '⏸ paused' : `▶ ${speed}×`}</span>`,
+        ].join(''),
+      );
+      return;
+    }
+
+    const pop = populationCount(w);
+    const housing = housingCapacity(w);
+    hud.setButtonLabel(
+      'battle',
+      troops ? `⚔ March to Battle (${troops})` : '⚔ March to Battle',
+      troops
+        ? `Take your ${troops} troops to fight ${enemyCount(w.battlesWon)} enemies (Battle ${w.battlesWon + 1})`
+        : 'Train soldiers at the Barracks first, then march to battle',
+    );
     hud.setTopBar(
       [
         `<span class="stat"${t('Wood — your main building material. Woodcutters chop it from trees.')}>${icon('i-wood')} ${w.stockpile.wood}</span>`,
@@ -713,10 +858,8 @@ async function start(): Promise<void> {
         `<span class="stat"${t('Gold — earned by selling at the Market, spent buying goods or training soldiers.')}>🪙 ${w.gold}</span>`,
         `<span class="stat"${t('Population / housing capacity. Build Houses to raise the cap.')}>👥 ${pop}/${housing}</span>`,
         `<span class="stat"${t('Popularity — rises when peasants are fed (varied diet helps), falls when they starve. 0 = you lose.')}>❤️ ${w.popularity} (food ${w.lastFoodDelta >= 0 ? '+' : ''}${w.lastFoodDelta})</span>`,
-        w.villages.length
-          ? `<span class="stat"${t('Enemy lands conquered. Your home is peaceful — build an army, then march your soldiers east across the frontier to invade. Defeat a land\'s defenders to capture it: its land opens, it pays passive income, and it unlocks an elite unit. Winning never ends the game.')}>🏳 ${w.villages.filter((v) => v.captured).length}/${w.villages.length}</span>`
-          : '',
-        `<span class="stat"${t('Your home is a peaceful community — no raids or attacks here. Conquest happens out on the eastern frontier.')}>☮ peaceful home</span>`,
+        `<span class="stat"${t('Your standing army. Train soldiers at the Barracks, then use March to Battle to take them to the field.')}>⚔ ${troops} troops</span>`,
+        `<span class="stat"${t('Battles won. Each victory makes the next enemy army bigger and tougher — and pays more loot.')}>🏆 ${w.battlesWon} won</span>`,
         `<span class="stat"${t('Game speed — 1/2/3 to change, P to pause.')}>${paused ? '⏸ paused' : `▶ ${speed}×`}</span>`,
       ].join(''),
     );

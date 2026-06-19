@@ -1,11 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { Sim } from '../src/sim/sim';
-import { removeBuilding } from '../src/sim/world';
 import { MAP_H, RAID_AT_TICK } from '../src/config';
 
-// Only count raid raiders (village guards have a home and stay put).
 function raiderCount(sim: Sim): number {
-  return [...sim.world.units.values()].filter((u) => u.role === 'raider' && !u.home).length;
+  return [...sim.world.units.values()].filter((u) => u.role === 'raider').length;
 }
 
 function run(sim: Sim, ticks: number): void {
@@ -15,23 +13,10 @@ function run(sim: Sim, ticks: number): void {
   }
 }
 
-/** Remove enemy villages so combat tests run on a clean field. */
-function clearVillages(sim: Sim): void {
-  for (const v of sim.world.villages) {
-    for (const id of [...v.buildingIds]) {
-      const b = sim.world.buildings.get(id);
-      if (b) removeBuilding(sim.world, b);
-    }
-    for (const id of v.defenderIds) sim.world.units.delete(id);
-  }
-  sim.world.villages = [];
-}
-
 function makeSim(): Sim {
   const sim = new Sim(3);
   sim.world.granaryFood.bread = 100000; // keep popularity out of the picture
   sim.world.nextImmigrationTick = Number.MAX_SAFE_INTEGER;
-  clearVillages(sim);
   return sim;
 }
 
@@ -91,5 +76,5 @@ describe('combat', () => {
     // raiders must have chewed through at least one wall segment
     const wallsAfter = [...sim.world.buildings.values()].filter((b) => b.type === 'wall').length;
     expect(wallsAfter).toBeLessThan(wallCount);
-  });
+  }, 20000); // pathfinding-heavy 4000-tick run; allow headroom under parallel load
 });

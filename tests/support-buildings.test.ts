@@ -52,6 +52,15 @@ describe('army support buildings', () => {
     expect(sim.world.unlocked).toContain('mangonel');
   });
 
+  it('Blacksmith unlocks the Crossbowman', () => {
+    const sim = new Sim(1);
+    rich(sim);
+    expect(sim.world.unlocked).not.toContain('crossbowman');
+    sim.enqueue({ type: 'placeBuilding', building: 'blacksmith', tile: { x: 5, y: 5 } });
+    sim.tick();
+    expect(sim.world.unlocked).toContain('crossbowman');
+  });
+
   it('Blacksmith buffs player soldiers: more damage dealt, less taken', () => {
     // A knight fights a lone raider with and without a Blacksmith standing.
     const fight = (withSmith: boolean): number => {
@@ -65,7 +74,7 @@ describe('army support buildings', () => {
       const knight = spawnUnit(sim.world, 'knight', { x: 40, y: 40 }, SOLDIERS.knight.hp);
       spawnUnit(sim.world, 'raider', { x: knight.pos.x + 1, y: knight.pos.y }, RAIDER_HP);
       run(sim, 500);
-      const loose = [...sim.world.units.values()].filter((u) => u.role === 'raider' && !u.home);
+      const loose = [...sim.world.units.values()].filter((u) => u.role === 'raider');
       expect(loose.length, 'knight defeats the raider either way').toBe(0);
       const survivor = sim.world.units.get(knight.id);
       expect(survivor, 'knight survives either way').toBeTruthy();

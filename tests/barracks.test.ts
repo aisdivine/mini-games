@@ -71,7 +71,7 @@ describe('barracks & soldiers', () => {
     expect(knight).toBeTruthy();
     // a lone (non-village) raider right next to the knight
     const loose = (): Unit[] =>
-      [...sim.world.units.values()].filter((u) => u.role === 'raider' && !u.home);
+      [...sim.world.units.values()].filter((u) => u.role === 'raider');
     spawnUnit(sim.world, 'raider', { x: knight.pos.x + 1, y: knight.pos.y }, RAIDER_HP);
     expect(loose().length).toBe(1);
     run(sim, 500);

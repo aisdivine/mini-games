@@ -10,7 +10,7 @@ export interface Pt {
   y: number;
 }
 
-export type DecorId = 'tree' | 'stump' | 'mountain' | 'fish' | 'reeds' | 'frontierPost';
+export type DecorId = 'tree' | 'stump' | 'mountain' | 'fish' | 'reeds';
 export type ArtId = BuildingType | UnitRole | DecorId;
 
 export interface VectorAsset {
