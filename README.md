@@ -5,6 +5,12 @@ TypeScript + Vite + PixiJS v8; a pure-TS simulation fully decoupled from renderi
 
 Live: https://aisdivine.github.io/mini-games/land-of-faaa-faaa-away/
 
+> This repo is a little **mini-games arcade** (hub at
+> https://aisdivine.github.io/mini-games/). A second game, **Worldly Farm** (a
+> cozy Stardew-style farmer), lives self-contained in `games/farm/` — see
+> `games/farm/README.md`. Build it with `npm run build:farm`; build both with
+> `npm run build:all`. The rest of this README covers the stronghold game.
+
 ## Run
 
 ```bash

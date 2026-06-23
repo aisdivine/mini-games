@@ -25,6 +25,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build # → dist/land-of-faaa-faaa-away
+      - run: npm run build:farm # → dist/worldly-farm
       - name: Write the mini-games hub landing page
         run: |
           cat > dist/index.html <<'EOF'
@@ -35,15 +36,21 @@ jobs:
           <style>
             body{margin:0;min-height:100vh;display:grid;place-items:center;
               font-family:system-ui,sans-serif;background:#1d1a14;color:#efe7cf}
-            .card{text-align:center;padding:2rem}
-            a{display:inline-block;margin-top:1rem;padding:.8rem 1.4rem;border-radius:.6rem;
+            .card{text-align:center;padding:2rem;max-width:560px}
+            .games{display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;margin-top:1.2rem}
+            a{display:inline-block;padding:.85rem 1.4rem;border-radius:.6rem;
               background:#c4a24e;color:#1d1a14;text-decoration:none;font-weight:600}
+            a.farm{background:#7cb05a}
             h1{font-weight:700;letter-spacing:.02em}
+            p{opacity:.85}
           </style></head>
           <body><div class="card">
-            <h1>🏰 Mini-Games</h1>
+            <h1>🎮 Mini-Games</h1>
             <p>A little arcade of homemade games.</p>
-            <a href="./land-of-faaa-faaa-away/">▶ The Land of Faaa Faaa Away</a>
+            <div class="games">
+              <a href="./land-of-faaa-faaa-away/">🏰 The Land of Faaa Faaa Away</a>
+              <a class="farm" href="./worldly-farm/">🌱 Worldly Farm</a>
+            </div>
           </div></body></html>
           EOF
       - uses: actions/configure-pages@v5
